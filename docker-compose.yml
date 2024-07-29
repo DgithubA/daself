@@ -1,0 +1,18 @@
+services:
+  composer:
+    image: composer:latest
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: ["composer", "install"]
+
+  bot:
+    image: hub.madelineproto.xyz/danog/madelineproto
+    depends_on:
+      - composer
+    restart: on-failure:3
+    working_dir: /app
+    tty: true
+    volumes:
+      - .:/app
+    command: ["php", "bot.php"]
