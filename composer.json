@@ -1,0 +1,21 @@
+{
+    "name": "dgitlaba/daself",
+    "description": "telegram self bot to manage your account with some futures.",
+    "type": "project",
+    "require": {
+        "danog/madelineproto": "^8",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "license": "AGPL-3.0-only",
+    "authors": [
+        {
+            "name": "dana ahmadi",
+            "email": "bibaks34@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "APP\\": "src/"
+        }
+    }
+}
