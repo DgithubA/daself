@@ -36,4 +36,4 @@ if(isset($argv[1]) and $argv[1] == '--just-login') {
     exit(0);
 }
 
-APP\botHandler::startAndLoop($_ENV['SESSION_FILE'],$settings);
+APP\botHandler::startAndLoop($session_file,$settings);
