@@ -2,12 +2,15 @@
 declare(strict_types=1);
 
 namespace APP;
+use APP\Filter\FilterSavedMessage;
 use danog\MadelineProto\EventHandler\Attributes\Handler;
+use danog\MadelineProto\EventHandler\Filter\FilterOutgoing;
 use danog\MadelineProto\EventHandler\Message;
 use danog\MadelineProto\EventHandler\Participant\MySelf;
 use danog\MadelineProto\EventHandler\Plugin\RestartPlugin;
 use danog\MadelineProto\EventHandler\SimpleFilter\Incoming;
 use danog\MadelineProto\EventHandler\SimpleFilter\Outgoing;
+use danog\MadelineProto\ParseMode;
 use danog\MadelineProto\SimpleEventHandler;
 
 class botHandler extends SimpleEventHandler{
@@ -15,47 +18,61 @@ class botHandler extends SimpleEventHandler{
 
     public $self_id;
     public int $start_time;
-    /**
-     * Get peer(s) where to report errors.
-     */
-    public function getReportPeers(): array
-    {
+    public array $settings;
+
+    public function getReportPeers(): array{
         return [self::ADMIN];
     }
 
-    /**
-     * Returns a set of plugins to activate.
-     *
-     * See here for more info on plugins: https://docs.madelineproto.xyz/docs/PLUGINS.html
-     */
-    public static function getPlugins(): array
-    {
+    public static function getPlugins(): array{
         return [
-            // Offers a /restart command to admins that can be used to restart the bot, applying changes.
-            // Make sure to run in a bash while loop when running via CLI to allow self-restarts.
             RestartPlugin::class,
         ];
     }
 
-    public function onStart(): void
-    {
+    public function onStart(): void{
         $this->logger("The bot was started!");
-        $this->logger($this->getFullInfo('MadelineProto'));
-
         $this->sendMessageToAdmins("The bot was started!");
         $this->self_id = $this->getSelf()['id'];
         $this->start_time = time();
     }
 
     #[Handler]
-    public function handleMessage(Outgoing&Message\PrivateMessage $message): void{
-        if ($message->chatId === $this->self_id){
-            if($message->message === '/start'){
-                $this->sendMessage($message->chatId,"the bot uptime is:" . (time() - $this->start_time));
-            }elseif ($message->message === '/shutdown'){
-                $this->sendMessage($message->chatId,"goodbye :)");
-                $this->stop();
+    public function handleAllMessages(Message $message): void{
+        if($this->settings['save_message']){
+            if($message->message != "turned on."){
+                $this->sendMessage($message->chatId,'```'.json_encode($message,448).'```',ParseMode::MARKDOWN);
             }
         }
+    }
+    #[Handler]
+    public function savedMessage(Message\PrivateMessage & FilterSavedMessage $message): void{
+        $message_text = strtolower($message->message);
+        switch ($message_text){
+            case '/start':
+                $this->sendMessage($message->chatId,"the bot uptime is:" . (time() - $this->start_time));
+                break;
+            case '/help':
+                $this->sendMessage($message->chatId,"the bot help!");
+                break;
+            case '/shutdown':
+                $this->sendMessage($message->chatId,"goodbye :)");
+                $this->stop();
+                break;
+            case '/getSetting':
+                $this->sendMessage($message->chatId,'```'.json_encode($this->settings,448).'```',ParseMode::MARKDOWN);
+                break;
+            case '/setSettings':
+                $this->settings = ['save_message'=>false];
+                $this->sendMessage($message->chatId,"setting updated.");
+                break;
+            case '/saveMessage':
+                $this->sendMessage($message->chatId,"turned on.");
+                $this->settings['save_message'] = true;
+        }
+
+    }
+    public function __sleep(): array{
+        return ["settings"];
     }
 }
