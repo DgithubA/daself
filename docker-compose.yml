@@ -15,7 +15,8 @@ services:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
     volumes:
       - ./postgres:/var/lib/postgresql/data
-    ports: 5432:5432
+    ports:
+      - 5432:5432
   bot:
     image: hub.madelineproto.xyz/danog/madelineproto
     depends_on:
