@@ -8,7 +8,7 @@ $dotenv->safeLoad();
 
 $settings = new Settings();
 $settings->setAppInfo((new Settings\AppInfo())->setApiId((int)$_ENV['API_ID'])->setApiHash($_ENV['API_HASH'])->setAppVersion($_ENV['VERSION'])->setDeviceModel($_ENV['DEVICE_MODEL']));
-$settings->setDb((new Settings\Database\Postgres())->setUri('tcp://127.0.0.1')->setDatabase('postgres')->setPassword('postgres')->setUsername('postgres'));
+$settings->setDb((new Settings\Database\Postgres())->setUri('tcp://postgres')->setDatabase('postgres')->setPassword('postgres')->setUsername('postgres'));
 
 $session_dir = $_ENV['SESSION_DIR'];
 str_ends_with($session_dir , '/') && $session_dir = substr($session_dir, 0, -1);
