@@ -5,11 +5,22 @@ services:
     volumes:
       - .:/app
     command: ["composer", "install"]
-
+  postgres:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    ports: 5432:5432
   bot:
     image: hub.madelineproto.xyz/danog/madelineproto
     depends_on:
       - composer
+      - postgres
     restart: on-failure:3
     working_dir: /app
     tty: true
