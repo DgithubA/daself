@@ -35,15 +35,17 @@ class botHandler extends SimpleEventHandler{
 
     #[Handler]
     public function handleAllMessages(Message $message): void{
-        if($this->settings['save_message']){
+        if(isset($this->settings['save_message']) && $this->settings['save_message'] ?? false){
             if($message->message != "turned on."){
                 $this->sendMessage($message->chatId,'```'.json_encode($message,448).'```',ParseMode::MARKDOWN);
+                $this->settings['save_message'] = false;
             }
         }
     }
     #[FilterSavedMessage]
     public function savedMessage(Message\PrivateMessage $message): void{
-        $message_text = strtolower($message->message);
+        $message_text = trim($message->message);
+        $lower_case_message = mb_strtolower($message_text);
         switch ($message_text){
             case '/start':
                 $this->sendMessage($message->chatId,"the bot uptime is:" . (time() - $this->start_time));
