@@ -4,12 +4,8 @@ declare(strict_types=1);
 namespace APP;
 use APP\Filter\FilterSavedMessage;
 use danog\MadelineProto\EventHandler\Attributes\Handler;
-use danog\MadelineProto\EventHandler\Filter\FilterOutgoing;
 use danog\MadelineProto\EventHandler\Message;
-use danog\MadelineProto\EventHandler\Participant\MySelf;
 use danog\MadelineProto\EventHandler\Plugin\RestartPlugin;
-use danog\MadelineProto\EventHandler\SimpleFilter\Incoming;
-use danog\MadelineProto\EventHandler\SimpleFilter\Outgoing;
 use danog\MadelineProto\ParseMode;
 use danog\MadelineProto\SimpleEventHandler;
 
@@ -18,7 +14,7 @@ class botHandler extends SimpleEventHandler{
 
     public $self_id;
     public int $start_time;
-    public array $settings;
+    public array $settings = [];
 
     public function getReportPeers(): array{
         return [self::ADMIN];
@@ -45,8 +41,8 @@ class botHandler extends SimpleEventHandler{
             }
         }
     }
-    #[Handler]
-    public function savedMessage(Message\PrivateMessage & FilterSavedMessage $message): void{
+    #[FilterSavedMessage]
+    public function savedMessage(Message\PrivateMessage $message): void{
         $message_text = strtolower($message->message);
         switch ($message_text){
             case '/start':
@@ -70,7 +66,6 @@ class botHandler extends SimpleEventHandler{
                 $this->sendMessage($message->chatId,"turned on.");
                 $this->settings['save_message'] = true;
         }
-
     }
     public function __sleep(): array{
         return ["settings"];
