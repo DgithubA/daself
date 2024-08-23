@@ -7,6 +7,7 @@ services:
     command: ["composer", "install"]
   postgres:
     image: postgres:latest
+    container_name: postgres
     restart: always
     environment:
       POSTGRES_USER: postgres
@@ -15,11 +16,24 @@ services:
       - ./postgres:/var/lib/postgresql/data
     ports:
       - 5432:5432
+
+  redis:
+    image: redis:latest
+    restart: always
+    volumes:
+      - ./redis:/data
+    command: redis-server --save 60 1 --loglevel warning
+
   bot:
     image: hub.madelineproto.xyz/danog/madelineproto
+    container_name: bot
     depends_on:
-      - composer
-      - postgres
+       composer:
+         condition: service_completed_successfully
+       postgres:
+         condition: service_started
+       redis:
+         condition: service_started
     restart: on-failure:3
     working_dir: /app
     tty: true
