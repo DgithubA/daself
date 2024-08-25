@@ -50,6 +50,10 @@ class botHandler extends SimpleEventHandler{
             case '/start':
                 $this->sendMessage($message->chatId,"the bot uptime is:" . (time() - $this->start_time));
                 break;
+            case '/restart':
+                $this->sendMessage($message->chatId,"restarting...");
+                $this->restart();
+                break;
             case '/help':
                 $this->sendMessage($message->chatId,"the bot help!");
                 break;
