@@ -1,6 +1,8 @@
 # DASELF
 
-***daself bot is auto control telegram user account and manage it with Interesting and additional features. _made by [madelineproto](https://docs.madelineproto.xyz)_***
+***daself bot is auto control telegram user account and manage it with Interesting and additional
+features. _made by [madelineproto](https://docs.madelineproto.xyz)_***
+
 ## <a name="installation">🔨 Installation</a>
 
 ### <a name="docker">🐳 Docker</a>
@@ -17,8 +19,8 @@
     <summary>postgres</summary>
 
     ```shell
-        docker run --name some-postgres -v ./postgres:/var/lib/postgresql/data -d postgres && \
-        docker run --rm -it --init -v ./:/app --link some-redis:redis --name login hub.madelineproto.xyz/danog/madelineproto php /app/bot.php --login
+    docker run --name some-postgres -v ./postgres:/var/lib/postgresql/data -e POSTGRES_PASSWORD=postgres -d postgres ; \
+    docker run --rm -it --init -v ./:/app --link some-postgres:postgres --name login hub.madelineproto.xyz/danog/madelineproto php /app/bot.php --login
     ```
     </details>
 
@@ -26,14 +28,22 @@
     <summary>redis</summary>
 
     ```shell
-        docker run --name some-redis -v ./redis:/data -d redis && \
-        docker run --rm -it --init -v ./:/app --link some-postgres:postgres --name login hub.madelineproto.xyz/danog/madelineproto php /app/bot.php --login
+    docker run --name some-redis -v ./redis:/data -d redis ; \
+    docker run --rm -it --init -v ./:/app --link some-redis:redis --name login hub.madelineproto.xyz/danog/madelineproto php /app/bot.php --login
+    ```
+    </details>
+   <details>
+    <summary>mysql</summary>
+
+    ```shell
+    docker run --name some-mysql -v ./data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=password -d mysql ; \
+    docker run --rm -it --init -v ./:/app --link some-mysql:mysql --name login hub.madelineproto.xyz/danog/madelineproto php /app/bot.php --login
     ```
     </details>
 
 4. **remove containers:**
     ```shell
-      docker rm -f login some-redis some-postgres
+    docker rm -f login some-redis some-postgres some-mysql
     ```
 5. **run services:**
     ```shell
@@ -73,3 +83,4 @@
 - [ ] block user (delete two-way messages)
 - [ ] reactions message (count reactions emoji in message)
 - [ ] save/download stories
+- [ ] delete duplicate file/media in chat.
