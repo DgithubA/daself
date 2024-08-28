@@ -13,16 +13,15 @@ $dotenv->safeLoad();
 $settings = new Settings();
 $settings->setAppInfo((new Settings\AppInfo())->setApiId((int)$_ENV['API_ID'])->setApiHash($_ENV['API_HASH'])->setAppVersion($_ENV['VERSION'])->setDeviceModel($_ENV['DEVICE_MODEL']));
 
-if ($_ENV['DB'] == 'redis') {
-    $def_host = gethostbyname('redis') !== 'redis' ? 'redis' : '127.0.0.1';
-    $db = (new Settings\Database\Redis())->setUri('redis://' . $_ENV['REDIS_HOST'] . ':' . $_ENV['REDIS_PORT']);
-    if (!empty($_ENV['REDIS_PASSWORD'])) $db->setPassword($_ENV['REDIS_PASSWORD']);
-} elseif ($_ENV['DB'] == 'postgres') {
-    $def_host = gethostbyname('postgres') !== 'postgres' ? 'postgres' : '127.0.0.1';
-    $db = (new Settings\Database\Postgres())->setUri('tcp://' . ($_ENV['DB_HOST'] ?? $def_host))->setDatabase($_ENV['DB_DATABASE'] ?? 'postgres')->setPassword($_ENV['DB_PASSWORD'] ?? 'postgres')->setUsername($_ENV['DB_USERNAME'] ?? 'postgres');
-} elseif ($_ENV['DB'] == 'mysql') {
-    $def_host = gethostbyname('mysql') !== 'mysql' ? 'mysql' : '127.0.0.1';
-    $db = (new Settings\Database\Mysql())->setUri('tcp://' . ($_ENV['DB_HOST'] ?? $def_host))->setDatabase($_ENV['DB_DATABASE'] ?? 'daself')->setPassword($_ENV['DB_PASSWORD'] ?? '')->setUsername($_ENV['DB_USERNAME'] ?? 'root');
+
+$def_host = gethostbyname($_ENV['DB_HOST']) !== $_ENV['DB_HOST'] ? $_ENV['DB_HOST'] : '127.0.0.1';
+if ($_ENV['DB_CONNECTION'] == 'redis') {
+    $db = (new Settings\Database\Redis())->setUri('tcp://' . $def_host . ':' . $_ENV['DB_PORT']);
+    if (!empty($_ENV['DB_PASSWORD'])) $db->setPassword($_ENV['DB_PASSWORD']);
+} elseif ($_ENV['DB_CONNECTION'] == 'postgres') {
+    $db = (new Settings\Database\Postgres())->setUri('tcp://' . $def_host . ':' . $_ENV['DB_PORT'])->setDatabase($_ENV['DB_DATABASE'] ?? 'postgres')->setPassword($_ENV['DB_PASSWORD'] ?? 'postgres')->setUsername($_ENV['DB_USERNAME'] ?? 'postgres');
+} elseif ($_ENV['DB_CONNECTION'] == 'mysql') {
+    $db = (new Settings\Database\Mysql())->setUri('tcp://' . $def_host . ':' . $_ENV['DB_PORT'])->setDatabase($_ENV['DB_DATABASE'] ?? 'daself')->setPassword($_ENV['DB_PASSWORD'] ?? '')->setUsername($_ENV['DB_USERNAME'] ?? 'root');
 } else $db = (new Settings\Database\Memory());
 
 $settings->setDb($db);
