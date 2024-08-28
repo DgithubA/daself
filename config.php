@@ -18,9 +18,9 @@ $def_host = gethostbyname($_ENV['DB_HOST']) !== $_ENV['DB_HOST'] ? $_ENV['DB_HOS
 if ($_ENV['DB_CONNECTION'] == 'redis') {
     $db = (new Settings\Database\Redis())->setUri('tcp://' . $def_host . ':' . $_ENV['DB_PORT']);
     if (!empty($_ENV['DB_PASSWORD'])) $db->setPassword($_ENV['DB_PASSWORD']);
-} elseif ($_ENV['DB'] == 'postgres') {
+} elseif ($_ENV['DB_CONNECTION'] == 'postgres') {
     $db = (new Settings\Database\Postgres())->setUri('tcp://' . $def_host . ':' . $_ENV['DB_PORT'])->setDatabase($_ENV['DB_DATABASE'] ?? 'postgres')->setPassword($_ENV['DB_PASSWORD'] ?? 'postgres')->setUsername($_ENV['DB_USERNAME'] ?? 'postgres');
-} elseif ($_ENV['DB'] == 'mysql') {
+} elseif ($_ENV['DB_CONNECTION'] == 'mysql') {
     $db = (new Settings\Database\Mysql())->setUri('tcp://' . $def_host . ':' . $_ENV['DB_PORT'])->setDatabase($_ENV['DB_DATABASE'] ?? 'daself')->setPassword($_ENV['DB_PASSWORD'] ?? '')->setUsername($_ENV['DB_USERNAME'] ?? 'root');
 } else $db = (new Settings\Database\Memory());
 
