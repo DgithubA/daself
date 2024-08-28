@@ -84,3 +84,4 @@ features. _made by [madelineproto](https://docs.madelineproto.xyz)_***
 - [ ] reactions message (count reactions emoji in message)
 - [ ] save/download stories
 - [ ] delete duplicate file/media in chat.
+- [ ] download and re-upload protected channel file. 

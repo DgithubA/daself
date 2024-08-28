@@ -13,6 +13,7 @@ if($_ENV['DB'] == 'redis'){
     echo "database is redis\n";
     $def_host = gethostbyname('redis') !== 'redis' ? 'redis' : '127.0.0.1';
     $redis = createRedisClient('tcp://'.$def_host);
+    echo $redis->echo('connecting successfully.');
     $redis->ping();
 }elseif($_ENV['DB'] == 'postgres'){
     echo "database is postgres\n";

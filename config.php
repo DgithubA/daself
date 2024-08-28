@@ -3,7 +3,7 @@
 
 require_once 'vendor/autoload.php';
 
-
+date_default_timezone_set("Asia/Tehran");
 use danog\MadelineProto\Settings;
 
 
