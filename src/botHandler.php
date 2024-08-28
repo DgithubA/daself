@@ -9,6 +9,7 @@ use Amp\Mysql\MysqlConnectionPool;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnectionPool;
 use Amp\Redis\RedisClient;
+use APP\Filter\FilterIncomingTtlMedia;
 use APP\Filter\FilterSavedMessage;
 use APP\Filter\FilterUserStatus;
 use APP\Helper\Helper;
@@ -25,9 +26,13 @@ use danog\MadelineProto\EventHandler\Filter\FilterMedia;
 use danog\MadelineProto\EventHandler\Filter\FilterOutgoing;
 use danog\MadelineProto\EventHandler\Filter\FilterPrivate;
 use danog\MadelineProto\EventHandler\Filter\FilterService;
+use danog\MadelineProto\EventHandler\Media\Photo;
+use danog\MadelineProto\EventHandler\Media\Video;
 use danog\MadelineProto\EventHandler\Message;
 use danog\MadelineProto\EventHandler\Pinned;
 use danog\MadelineProto\EventHandler\Plugin\RestartPlugin;
+use danog\MadelineProto\EventHandler\SimpleFilter\HasMedia;
+use danog\MadelineProto\EventHandler\SimpleFilter\Incoming;
 use danog\MadelineProto\EventHandler\Typing;
 use danog\MadelineProto\EventHandler\Update;
 use danog\MadelineProto\LocalFile;
@@ -42,7 +47,7 @@ use function Amp\Redis\createRedisClient;
 class botHandler extends SimpleEventHandler{
     public const ADMIN = "@me";
 
-    public int $self_id;
+    public int $save_id;
     public int $start_time;
     public array $settings = [];
 
@@ -71,15 +76,32 @@ class botHandler extends SimpleEventHandler{
         }elseif ($db_setting instanceof Settings\Database\Redis){
             $this->connectionPool = createRedisClient($db_setting->getUri());
         }
-
         $this->myReport("The bot was started!");
-        $this->self_id = $this->getSelf()['id'];
+
+        if(isset($this->settings['save_id'])){
+            $this->save_id = $this->settings['save_id'];
+        }else $this->save_id = $this->getSelf()['id'];
+
         $this->start_time = time();
     }
 
     private function myReport(string $message) : array{
         return $this->sendMessageToAdmins($message,parseMode: ParseMode::HTML);
     }
+
+    #[FilterIncomingTtlMedia]
+    public function IncomingTtlMedia(Message\PrivateMessage $message){
+        $path = $message->media->downloadToDir('./data/');
+        $user_name = $this->getInfo($message->chatId)['user']['first_name'];
+        $caption = "ttl file from <a href='tg://user=".$message->chatId."'>".$user_name."</a>";
+        $local_file = (new \danog\MadelineProto\LocalFile($path));
+        if($message->media instanceof Photo){
+            $this->sendPhoto($this->save_id,$local_file,$caption,ParseMode::HTML);
+        }elseif ($message->media instanceof Video){
+            $this->sendVideo($this->save_id ,$local_file,caption: $caption,parseMode: ParseMode::HTML,mimeType: $message->media->mimeType);
+        }
+    }
+
     #[Handler]
     public function allUpdates(Update $update){
         $last_flag_keys = array_keys(self::LAST_FLAG);
@@ -150,7 +172,7 @@ class botHandler extends SimpleEventHandler{
                         if(!$sent) break;
                     }
 
-                    if($sent){
+                    if($sent and isset($this->settings['last'][$key])){
                         $serilize_update = $update->jsonSerialize();
                         $update_name = basename($serilize_update['_']);
                         $this->logger($update_name);
@@ -160,37 +182,26 @@ class botHandler extends SimpleEventHandler{
                         $this->myReport($to_send);
                         $this->settings['last'][$key]['count']--;
                     }
-                }else {
-                    unset($this->settings['last'][$key]);
-                    sort($this->settings['last']);
-                }
+                }else unset($this->settings['last'][$key]);
             }
-        }
-    }
-
-    #[Handler]
-    public function handleAllMessages(Message $message): void{
-        if(isset($this->settings['save_message']) && $this->settings['save_message'] ?? false){
-            if($message->message != "turned on."){
-                $this->sendMessage($message->chatId,'<pre language="json" ><code>'.json_encode($message,448).'</code></pre>',ParseMode::HTML);
-                $this->settings['save_message'] = false;
-            }
+            sort($this->settings['last']);
         }
     }
     #[FilterSavedMessage]
     public function savedMessage(Message\PrivateMessage $message): void{
+
         $message_text = trim($message->message);
         $lower_case_message = mb_strtolower($message_text);
         if(isset($message->replyToMsgId)) $reply_to_message_id = $message->replyToMsgId;
         $chat = $message->chatId;
-        if(in_array($message_text,['/start','/usage','/restart','/help','/shutdown','/getSettings'])) {
-            switch ($message_text) {
+        if(in_array($lower_case_message,['/start','/usage','/restart','/help','/shutdown','/getsettings'])) {
+            switch ($lower_case_message) {
                 case '/start':
-                    $fs = "the bot uptime is:" . Helper::formatSeconds((time() - $this->start_time));
+                    $fs = "the bot uptime is:\n" . Helper::formatSeconds((time() - $this->start_time));
                     break;
                 case '/usage':
-                    $fs = 'Memory now Usage : ' . round(memory_get_usage() / 1024 / 1024, 2) . '**/**' . round(memory_get_usage(true) / 1024 / 1024, 2) . ' **MB**';
-                    $fs .= "\nMemory peak Usage : " . round(memory_get_peak_usage() / 1024 / 1024, 2) . '**/**' . round(memory_get_peak_usage(true) / 1024 / 1024, 2) . ' **MB**';
+                    $fs = 'Memory now Usage : ' . round(memory_get_usage() / 1024 / 1024, 2) . '<b>/</b>' . round(memory_get_usage(true) / 1024 / 1024, 2) . ' <b>MB</b>';
+                    $fs .= "\nMemory peak Usage : " . round(memory_get_peak_usage() / 1024 / 1024, 2) . '<b>/</b>' . round(memory_get_peak_usage(true) / 1024 / 1024, 2) . ' <b>MB</b>';
                     break;
                 case '/restart':
                     $fs = "restarting...";
@@ -213,7 +224,7 @@ class botHandler extends SimpleEventHandler{
                     $this->sendMessage($chat, $fs);
                     $this->stop();
                     break;
-                case '/getSettings':
+                case '/getsettings':
                     $fs = '<pre language="json"><code>' . json_encode($this->settings, 448) . '</code></pre>';
                     break;
                 default:
@@ -295,9 +306,11 @@ class botHandler extends SimpleEventHandler{
             }
             $this->logger("end runner");
         }elseif (preg_match("/^\/query\s?(.+)$/su", $message_text, $match)){
-            $result = $this->connectionPool->execute($match[1]);
-            $text = "result:\n". Helper::queryResult2String($result);
-            $message->reply($text);
+            if(!is_null($this->connectionPool)){
+                $result = $this->connectionPool->execute($match[1]);
+                $reply_text = "result:\n". Helper::queryResult2String($result);
+            }else $reply_text = "without database connection.";
+            $message->reply($reply_text,ParseMode::HTML);
         }
 
         if(!empty($fs)) $this->sendMessage($chat, $fs,parseMode: ParseMode::HTML);
@@ -306,5 +319,6 @@ class botHandler extends SimpleEventHandler{
     public function __sleep(): array{
         return ["settings"];
     }
+
 
 }
