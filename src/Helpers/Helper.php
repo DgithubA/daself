@@ -3,8 +3,21 @@
 namespace APP\Helpers;
 
 
+use Amp\ByteStream\Pipe;
+use Amp\ByteStream\ReadableStream;
+use Amp\Cancellation;
+use Amp\Http\Client\HttpClientBuilder;
+use Amp\Http\Client\Request;
 use Amp\Mysql\MysqlResult;
 use Amp\Postgres\PostgresResult;
+use danog\MadelineProto\BotApiFileId;
+use danog\MadelineProto\EventHandler\Media;
+use danog\MadelineProto\EventHandler\Message;
+use danog\MadelineProto\LocalFile;
+use danog\MadelineProto\RemoteUrl;
+use danog\MadelineProto\StreamDuplicator;
+use function Amp\async;
+
 class Helper{
 
     public static function queryResult2String($result):string{

@@ -2,13 +2,21 @@
 
 namespace APP\Traits;
 
+use Amp\ByteStream\Pipe;
+use Amp\ByteStream\ReadableStream;
+use Amp\Cancellation;
 use APP\Constants\Constants;
 use APP\Helpers\Helper;
+use danog\MadelineProto\BotApiFileId;
+use danog\MadelineProto\EventHandler\Media;
 use danog\MadelineProto\EventHandler\Message;
 use danog\MadelineProto\EventHandler\Update;
 use danog\MadelineProto\LocalFile;
-use danog\MadelineProto\RPCErrorException;
+use danog\MadelineProto\ParseMode;
+use danog\MadelineProto\RemoteUrl;
+use danog\MadelineProto\StreamDuplicator;
 use Throwable;
+use function Amp\async;
 use function APP\localization\__;
 
 trait HelperTrait{
@@ -144,5 +152,30 @@ trait HelperTrait{
         }
         return $fe;
     }
+    private function extractMime(bool $secret, Message|Media|LocalFile|RemoteUrl|BotApiFileId|ReadableStream &$file, ?string $fileName, ?callable $callback, ?Cancellation $cancellation): string
+    {
+        $size = 0;
+        $file = $this->getStream($file, $cancellation, $size);
+        $p = new Pipe(1024*1024);
+        $fileFuture = async(fn () => $this->uploadFromStream(
+            new StreamDuplicator($file, $p->getSink()),
+            $size,
+            'application/octet-stream',
+            $fileName ?? '',
+            $callback,
+            $secret,
+            $cancellation
+        ));
 
+        $buff = '';
+        while (\strlen($buff) < 1024*1024 && null !== $chunk = $p->getSource()->read($cancellation)) {
+            $buff .= $chunk;
+        }
+        $p->getSink()->close();
+        $p->getSource()->close();
+        unset($p);
+
+        $file = $fileFuture->await();
+        return (new finfo())->buffer($buff, FILEINFO_MIME_TYPE);
+    }
 }

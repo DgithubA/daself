@@ -14,8 +14,15 @@ services:
 #      POSTGRES_PASSWORD: postgres
 #    volumes:
 #      - ./postgres:/var/lib/postgresql/data
-#    ports:
-#      - 5432:5432
+
+#  mysql:
+#    image: mysql:latest
+#    container_name: mysql
+#    restart: always
+#    environment:
+#      MYSQL_ROOT_PASSWORD=password
+#    volumes:
+#      - ./mysql:/var/lib/mysql
 
   redis:
     image: redis:latest
@@ -23,8 +30,15 @@ services:
     volumes:
       - ./redis:/data
     command: redis-server --save 60 1 --loglevel warning
+
+  web_server:
+    image: jkaninda/nginx-php-fpm:latest
+    container_name: web_server
+    restart: unless-stopped
+    volumes:
+      - ./www:./var/www/html
     ports:
-      - 6379:6379
+      - 80:80
 
   bot:
     image: hub.madelineproto.xyz/danog/madelineproto

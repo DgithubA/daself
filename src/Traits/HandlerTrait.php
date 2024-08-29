@@ -8,7 +8,6 @@ use APP\Filters\FilterIncomingTtlMedia;
 use APP\Filters\FilterSavedMessage;
 use APP\Filters\FilterUserStatus;
 use APP\Helpers\Helper;
-use APP\localization\localization;
 use danog\MadelineProto\EventHandler\AbstractStory;
 use danog\MadelineProto\EventHandler\Attributes\Handler;
 use danog\MadelineProto\EventHandler\CallbackQuery;
@@ -22,6 +21,9 @@ use danog\MadelineProto\EventHandler\Filter\FilterMedia;
 use danog\MadelineProto\EventHandler\Filter\FilterOutgoing;
 use danog\MadelineProto\EventHandler\Filter\FilterPrivate;
 use danog\MadelineProto\EventHandler\Filter\FilterService;
+use danog\MadelineProto\EventHandler\Media;
+use danog\MadelineProto\EventHandler\Media\Audio;
+use danog\MadelineProto\EventHandler\Media\Gif;
 use danog\MadelineProto\EventHandler\Media\Photo;
 use danog\MadelineProto\EventHandler\Media\Video;
 use danog\MadelineProto\EventHandler\Pinned;
@@ -32,6 +34,7 @@ use danog\MadelineProto\RemoteUrl;
 use danog\MadelineProto\StrTools;
 use danog\MadelineProto\VoIP;
 use danog\MadelineProto\EventHandler\Message;
+use danog\MadelineProto\EventHandler\Media\Document;
 use Throwable;
 use function APP\localization\__;
 
@@ -366,6 +369,67 @@ trait HandlerTrait{
                     default:
                         $fs = __('bad_command');
                 }
+            }
+        }elseif (str_starts_with($message_text,'download') or str_starts_with($message_text,'upload')) {
+            if($message_text == 'download' and $message->replyToMsgId != null){//replayed media to link
+                $replayed_message = $message->getReply();
+                if(isset($replayed_message->media) and $replayed_message->media instanceof Media){
+                    $media = $replayed_message->media;
+                    if($media->size > 10 * 1024 *1024 ){//size is less than 10MB
+                        $download_script_url = is_null($_ENV['DOWNLOAD_SCRIPT_URL']) ? null : $_ENV['DOWNLOAD_SCRIPT_URL'];
+                        try {
+                            $download_link = $this->getDownloadLink($media,$download_script_url);
+                            $fs = $download_link;
+                        }catch (\Exception $e){
+                            $fs = __('download_script_url_wrong');
+                        }
+                    }else $fs = __('file_is_too_small',['size'=>round($media->size / (1024^2),2),'minimumSize'=>'10MB']);
+                }else $fs = __('replayed_no_media');
+            }elseif (preg_match('/^upload:(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\/=]*))\s?(.*)$/', $message_text,$matches)) {
+                $url = $matches[1];
+                $file_name = !empty($matches[2]) ? $matches[2] : null;
+                $remote_file = new RemoteUrl($url);
+                $mime_type = $this->extractMime(false,$remote_file,null,null,null);
+                switch (strtolower($mime_type)){
+                    case 'video/mpeg':
+                    case 'video/mp4':
+                    case 'video/mpv':
+                        $type = Video::class;
+                        break;
+                    case 'image/jpeg':
+                    case 'image/png':
+                        $type = Photo::class;
+                        break;
+                    case 'image/gif':
+                        $type = Gif::class;
+                        break;
+                    case 'audio/flac':
+                    case 'audio/ogg':
+                    case 'audio/mpeg':
+                    case 'audio/mp4':
+                        $type = Audio::class;
+                        break;
+                    default:
+                        $type = Document::class;
+                        break;
+                }
+                switch ($type){
+                    case Document::class:
+                        $this->sendDocument($chat,$remote_file,fileName: $file_name);
+                        break;
+                    case Video::class:
+                        $this->sendVideo($chat,$remote_file,fileName: $file_name);
+                        break;
+                    case Photo::class:
+                        $this->sendPhoto($chat,$remote_file,fileName: $file_name);
+                        break;
+                    case Audio::class:
+                        $this->sendAudio($chat,$remote_file,fileName: $file_name);
+                        break;
+                    case Gif::class:
+                        $this->sendGif($chat,$remote_file,fileName: $file_name);
+                }
+
             }
         }
 

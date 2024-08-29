@@ -42,6 +42,8 @@ return [
         'on' => 'status: on',
         'off' => 'status: off',
     ],
-    'is_empty'=>'is empty'
-
+    'is_empty'=>'is empty',
+    'file_is_too_small'=> 'file is too small. file size: <b>:size</b> | minimum <b>:minimumSize</b>',
+    'replayed_no_media' => 'The replayed message has no media.',
+    'download_script_url_wrong'=> 'please set DOWNLOAD_SCRIPT_URL to use download link feature.'
 ];
