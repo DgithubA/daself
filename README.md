@@ -66,9 +66,9 @@ features. _made by [madelineproto](https://docs.madelineproto.xyz)_***
 
 ## FUTURES
 
-- [ ] save self-Destructing media
-- [ ] first comment in channel post comment
-- [ ] filter message text [delete message]
+- [X] save self-Destructing media
+- [X] first comment in channel post comment
+- [X] filter message text [delete message]
 - [ ] lock medias
 - [ ] clock on bio/fname/lname
 - [ ] auto answer based on text contain or regex with random answer
@@ -80,7 +80,7 @@ features. _made by [madelineproto](https://docs.madelineproto.xyz)_***
 - [ ] spammer and editor (Sequentially edit a message based on a previous setting)
 - [ ] split message peer word
 - [ ] link to file & file to link
-- [ ] block user (delete two-way messages)
+- [X] block user (delete two-way messages)
 - [ ] reactions message (count reactions emoji in message)
 - [ ] save/download stories
 - [ ] delete duplicate file/media in chat.

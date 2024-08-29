@@ -1,6 +1,6 @@
 <?php
 
-namespace APP\Helper;
+namespace APP\Helpers;
 
 
 use Amp\Mysql\MysqlResult;
@@ -53,5 +53,20 @@ class Helper{
 
     public static function haveNot(string $text,string $not = '!'){
         return str_ends_with($text,$not);
+    }
+
+    public static function myTrace(array $trace):string{
+        $str = "";
+        $nowfile = preg_replace("/^(.+)\.php(.*)$/", "$1.php", __FILE__);
+        foreach ($trace as $k => $frame) {
+            if(isset($frame['file']) and basename($frame['file']) === basename($nowfile)){
+                $str .= ('`#'.$k.'` ').
+                    (isset($frame['function']) ? '**'.$frame['function'].'**' :'') .
+                    ('('.$frame['line'].')').
+                    (isset($frame['args']) ? '('.json_encode($frame['args']).')' : '');
+            }
+            $str .= PHP_EOL;
+        }
+        return $str;
     }
 }

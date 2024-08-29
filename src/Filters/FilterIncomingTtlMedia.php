@@ -1,7 +1,7 @@
 <?php
 
 
-namespace APP\Filter;
+namespace APP\Filters;
 
 use Attribute;
 use danog\MadelineProto\EventHandler;
@@ -9,7 +9,6 @@ use danog\MadelineProto\EventHandler\Filter\Combinator\FiltersAnd;
 use danog\MadelineProto\EventHandler\Filter\Filter;
 use danog\MadelineProto\EventHandler\Filter\FilterIncoming;
 use danog\MadelineProto\EventHandler\Filter\FilterMedia;
-use danog\MadelineProto\EventHandler\Filter\FilterOutgoing;
 use danog\MadelineProto\EventHandler\Filter\FilterPrivate;
 use danog\MadelineProto\EventHandler\Media\Photo;
 use danog\MadelineProto\EventHandler\Media\Video;

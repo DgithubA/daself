@@ -1,7 +1,7 @@
 <?php
 
 
-namespace APP\Filter;
+namespace APP\Filters;
 
 use Attribute;
 use danog\MadelineProto\EventHandler\Filter\Filter;
