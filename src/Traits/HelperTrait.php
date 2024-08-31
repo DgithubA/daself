@@ -148,8 +148,8 @@ trait HelperTrait{
                 $fe = __('start_message', ['counter' => Helper::formatSeconds((time() - $this->start_time))]);
                 break;
             case '/usage':
-                $fe = __('memory_usage', ['usage' => round(memory_get_usage() / 1024 / 1024, 2), 'usage_real' => round(memory_get_usage(true) / 1024 / 1024, 2),
-                    'peak_usage' => round(memory_get_peak_usage() / 1024 / 1024, 2), 'peak_usage_real' => round(memory_get_peak_usage(true) / 1024 / 1024, 2)]);
+                $fe = __('memory_usage', ['usage' => round(memory_get_usage() / 1024 / 1024, 2), 'real_usage' => round(memory_get_usage(true) / 1024 / 1024, 2),
+                    'peak_usage' => round(memory_get_peak_usage() / 1024 / 1024, 2), 'real_peak_usage' => round(memory_get_peak_usage(true) / 1024 / 1024, 2)]);
                 break;
             default:
                 $fe = __('bad_command');

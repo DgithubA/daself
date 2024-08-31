@@ -31,18 +31,15 @@ use danog\MadelineProto\EventHandler\Pinned;
 use danog\MadelineProto\EventHandler\Typing;
 use danog\MadelineProto\EventHandler\Update;
 use danog\MadelineProto\LocalFile;
-use danog\MadelineProto\RemoteUrl;
 use danog\MadelineProto\StrTools;
 use danog\MadelineProto\VoIP;
 use danog\MadelineProto\EventHandler\Message;
-use danog\MadelineProto\EventHandler\Media\Document;
 use Throwable;
 
 trait HandlerTrait
 {
     #[FilterIncomingTtlMedia]
-    public function IncomingTtlMedia(Message\PrivateMessage $message): void
-    {
+    public function IncomingTtlMedia(Message\PrivateMessage $message): void{
         try {
             if (!\Amp\File\exists(Constants::DataFolderPath)) \Amp\File\createDirectory(Constants::DataFolderPath);
             $path = $message->media->downloadToDir(Constants::DataFolderPath);
@@ -63,8 +60,7 @@ trait HandlerTrait
     }
 
     #[FilterChannel]
-    public function channelMessage(Message\ChannelMessage $message): void
-    {
+    public function channelMessage(Message\ChannelMessage $message): void{
         try {
             if (($this->settings['firstc']['status'] ?? false) === true and empty($this->settings['firstc']['indexes'])) return;
             $discussion = $message->getDiscussion();
@@ -194,7 +190,7 @@ trait HandlerTrait
                 switch ($lower_case_message) {
                     case '/start':
                     case '/usage':
-                        $fs = $this->startUsage($message);
+                        $fe = $this->startUsage($message);
                         break;
                     case '/restart':
                         $fs = __('restarting');
@@ -400,7 +396,7 @@ trait HandlerTrait
                     if (isset($replayed_message->media) and $replayed_message->media instanceof Media) {
                         $media = $replayed_message->media;
                         if ($media->size > 10 * 1024 * 1024) {//size is less than 10MB
-                            $download_script_url = is_null($_ENV['DOWNLOAD_SCRIPT_URL']) ? null : $_ENV['DOWNLOAD_SCRIPT_URL'];
+                            $download_script_url = !empty($_ENV['DOWNLOAD_SCRIPT_URL']) ? $_ENV['DOWNLOAD_SCRIPT_URL'] : null;
                             try {
                                 $download_link = $this->getDownloadLink($media, $download_script_url);
                                 $fs = $download_link;
@@ -444,11 +440,11 @@ trait HandlerTrait
         }
     }
 
+
     #[FilterSavedMessage]
-    public function savedMessage(Message\PrivateMessage $message): void{
+    public function savedMessage(\danog\MadelineProto\EventHandler\Message\PrivateMessage $message): void{
         $this->commands($message);
     }
-
     #[FilterNot(new FilterSavedMessage())]
     public function OutgoingPrivateMessage(Message\PrivateMessage $message): void{
         try {

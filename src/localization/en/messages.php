@@ -4,7 +4,7 @@
 return [
     'json'=>'<pre language="json"><code>:json</code></pre>',
     'start_message'=>"the bot uptime is:\n:counter",
-    'memory_usage'=>"Memory now Usage : :usage <b>/</b>:usage_real <b>MB</b>\nMemory peak Usage :  :peak_usage <b>/</b>:peak_usage_real  <b>MB</b>",
+    'memory_usage'=>"Memory now Usage : :usage <b>/</b>:real_usage <b>MB</b>\nMemory peak Usage :  :peak_usage <b>/</b>:real_peak_usage  <b>MB</b>",
     'restarting'=>"restarting...",
     'shutdown'=>"goodbye :)",
     'bad_command'=>'bad command.!',
