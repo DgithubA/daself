@@ -183,7 +183,7 @@ trait HelperTrait{
         return (new finfo())->buffer($buff, FILEINFO_MIME_TYPE);
     }
 
-    private function upload(int|string $peer,string $url,int $replyToMsgId = null,string $file_name = null,callable $cb = null): void{
+    private function myUpload(int|string $peer,string $url,int $replyToMsgId = null,string $file_name = null,callable $cb = null): void{
         $remote_file = new RemoteUrl($url);
         $mime_type = $this->extractMime(false,$remote_file,null,null,null);
         switch (strtolower($mime_type)){
