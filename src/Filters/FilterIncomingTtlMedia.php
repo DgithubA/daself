@@ -15,11 +15,10 @@ use danog\MadelineProto\EventHandler\Media\Video;
 use danog\MadelineProto\EventHandler\Update;
 
 /**
- * Use with #[FilterSavedMessage]
+ * Use with #[FilterIncomingTtlMedia]
  */
 #[Attribute(Attribute::TARGET_METHOD)]
 final class FilterIncomingTtlMedia extends Filter{
-    private readonly int $self_id;
 
     public function initialize(EventHandler $API): Filter{
         return (new FiltersAnd(new FilterMedia(), new FilterIncoming(),new FilterPrivate()))->initialize($API);

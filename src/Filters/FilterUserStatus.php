@@ -10,7 +10,7 @@ use danog\MadelineProto\EventHandler\User\Status\Offline;
 use danog\MadelineProto\EventHandler\User\Status\Online;
 
 /**
- * Use with #[FilterSavedMessage]
+ * Use with #[FilterUserStatus]
  */
 #[Attribute(Attribute::TARGET_METHOD)]
 final class FilterUserStatus extends Filter

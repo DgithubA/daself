@@ -16,6 +16,7 @@
     "autoload": {
         "psr-4": {
             "APP\\": "src/"
-        }
+        },
+        "files": ["src/localization/__.php"]
     }
 }
