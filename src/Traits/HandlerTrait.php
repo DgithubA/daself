@@ -48,7 +48,7 @@ trait HandlerTrait
             $caption = __('ttl_caption', ['type' => ($message->media instanceof Photo) ? 'photo' : 'video', 'user_mention' => $user_mention]);
 
             $local_file = (new LocalFile($path));
-            $local_file = $message->media;
+            //$local_file = $message->media;
             if ($message->media instanceof Photo) {
                 $this->sendPhoto($this->save_id, $local_file, $caption, Constants::DefaultParseMode);
             } elseif ($message->media instanceof Video) {
@@ -399,6 +399,7 @@ trait HandlerTrait
                         $media = $replayed_message->media;
                         if ($media->size > 10 * 1024 * 1024) {//size is less than 10MB
                             $download_script_url = !empty($_ENV['DOWNLOAD_SCRIPT_URL']) ? $_ENV['DOWNLOAD_SCRIPT_URL'] : null;
+                            if(isset($this->settings['DOWNLOAD_SCRIPT_URL'])) $download_script_url = $this->settings['DOWNLOAD_SCRIPT_URL'];
                             try {
                                 $download_link = $this->getDownloadLink($media, $download_script_url);
                                 $fs = $download_link;

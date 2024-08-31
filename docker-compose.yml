@@ -1,6 +1,7 @@
 services:
   composer:
     image: composer:latest
+
     working_dir: /app
     volumes:
       - .:/app
@@ -32,13 +33,14 @@ services:
     command: redis-server --save 60 1 --loglevel warning
 
   web_server:
-    image: jkaninda/nginx-php-fpm:latest
+    image: nginx:latest
     container_name: web_server
     restart: unless-stopped
     volumes:
-      - ./www:./var/www/html
+      - ./:./var/www/html
+      - ./web.conf:/etc/nginx/conf.d/default.conf
     ports:
-      - 80:80
+      - 8000:80
 
   bot:
     image: hub.madelineproto.xyz/danog/madelineproto

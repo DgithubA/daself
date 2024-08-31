@@ -17,12 +17,4 @@ stages:
 pull_commits:
   extends: .ssh
   script:
-  - ssh $SSH_USER@$VM_IPADDRESS "cd daself && bash update.sh"
-
-
-force_pull_commits:
-  needs: [pull_commits]
-  extends: .ssh
-  when: manual
-  script:
-    - ssh $SSH_USER@$VM_IPADDRESS "cd daself && bash update.sh -f"
+  - ssh $SSH_USER@$VM_IPADDRESS "cd daself && bash update.sh -f"
