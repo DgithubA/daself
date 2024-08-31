@@ -44,11 +44,12 @@ class botHandler extends SimpleEventHandler{
         }elseif ($db_setting instanceof Settings\Database\Redis){
             $this->connectionPool = createRedisClient($db_setting->getUri());
         }
-        $this->myReport("The bot was started!");
 
         if(isset($this->settings['save_id'])){
             $this->save_id = $this->settings['save_id'];
-        }else $this->save_id = $this->getSelf()['id'];
+        }else $this->save_id = $this->getSelf()['id'] ?? $this->getReportPeers()[0];
+
+        $this->myReport("The bot was started!");
 
         if(isset($this->settings['local'])) $localization->setLocale($this->settings['local']);
         $this->start_time = time();
