@@ -26,13 +26,13 @@ class localization {
         $this->loadMessages();
     }
 
-    public static function localAvailable(string $local):bool{
-        $path = "./$local/";
+    public static function localAvailable(string $locale):bool{
+        $path = self::$LocalsFolderPath."{$locale}";
         return (file_exists($path) and ($files = scandir($path)) !== false and $files !== ['.','..']);
     }
 
     protected function loadMessages() :void{
-        $path = self::$LocalsFolderPath."/{$this->locale}/";
+        $path = self::$LocalsFolderPath."{$this->locale}/";
         $this->messages = [];
         $files = scandir($path);
         foreach ($files as $file) {
