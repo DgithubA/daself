@@ -4,11 +4,17 @@ namespace APP\localization;
 use APP\Constants\Constants;
 
 class localization {
+    /** @var string language code */
     protected string $locale;
-    /**
-     * @var string[]
-     */
+    /*** @var string[] */
     protected array $messages = [];
+
+    private static self $instance;
+    public static function getInstance(): localization{
+        if(!isset(self::$instance)) self::$instance = new self(\APP\Constants\Constants::DefaultLocal);
+        return self::$instance;
+    }
+
     private static string $LocalsFolderPath = Constants::LocalFolderPath;
     public function __construct($locale = 'en') {
         $this->setLocale($locale);
