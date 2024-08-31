@@ -45,5 +45,9 @@ return [
     'is_empty'=>'is empty',
     'file_is_too_small'=> 'file is too small. file size: <b>:size</b> | minimum <b>:minimumSize</b>',
     'replayed_no_media' => 'The replayed message has no media.',
-    'download_script_url_wrong'=> 'please set DOWNLOAD_SCRIPT_URL to use download link feature.'
+    'download_script_url_wrong'=> 'please set DOWNLOAD_SCRIPT_URL to use download link feature.',
+    'url_not_found'=>'url not found. use upload:{URL} [FILENAME] or reply to messages contain url of file',
+    'uploading'=>'uploading...',
+    'upload_percent'=>'uploading <b>%:percent</b>',
+    'upload_successfully'=> "upload successfully.\nTotal upload time: <b>:time</b>\nTotal upload speed: <b>:speed</b> mbps"
 ];

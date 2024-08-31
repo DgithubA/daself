@@ -82,4 +82,20 @@ class Helper{
         }
         return $str;
     }
+
+    public static function extracturls(string $test):array|false{
+        if(preg_match_all('~(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))~', $test,$matches)){
+            return $matches[0];
+        }else return false;
+    }
+
+    public static function humanFileSize($size,$unit="") :string{
+        if( (!$unit && $size >= 1<<30) || $unit == "GB")
+            return number_format($size/(1<<30),2)."GB";
+        if( (!$unit && $size >= 1<<20) || $unit == "MB")
+            return number_format($size/(1<<20),2)."MB";
+        if( (!$unit && $size >= 1<<10) || $unit == "KB")
+            return number_format($size/(1<<10),2)."KB";
+        return number_format($size)." bytes";
+    }
 }

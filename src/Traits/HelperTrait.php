@@ -9,11 +9,17 @@ use APP\Constants\Constants;
 use APP\Helpers\Helper;
 use danog\MadelineProto\BotApiFileId;
 use danog\MadelineProto\EventHandler\Media;
+use danog\MadelineProto\EventHandler\Media\Audio;
+use danog\MadelineProto\EventHandler\Media\Document;
+use danog\MadelineProto\EventHandler\Media\Gif;
+use danog\MadelineProto\EventHandler\Media\Photo;
+use danog\MadelineProto\EventHandler\Media\Video;
 use danog\MadelineProto\EventHandler\Message;
 use danog\MadelineProto\EventHandler\Update;
 use danog\MadelineProto\LocalFile;
 use danog\MadelineProto\RemoteUrl;
 use danog\MadelineProto\StreamDuplicator;
+use finfo;
 use Throwable;
 use function Amp\async;
 
@@ -48,10 +54,10 @@ trait HelperTrait{
         return "";
     }
 
-    public function errorReport(string $function, \Throwable $e,Update|string $update = null){
+    private function errorReport(string $function, \Throwable $e,Update|string $update = null){
         try {
             $do_report = true;
-            $error_report_setting = ["to_id" => $this->data['error_report']['to_id'] ?? $this->saveid ?? "me",
+            $error_report_setting = ["to_id" => $this->data['error_report']['to_id'] ?? $this->save_id ?? "me",
                 "repto_s_m" => $this->data['error_report']['repto_s_m'] ?? true,
                 "sendupdate" => $this->data['error_report']['sendupdate'] ?? false,
                 "sendtrace" => $this->data['error_report']['sendtrace'] ?? true,
@@ -135,7 +141,7 @@ trait HelperTrait{
         }
     }
 
-    public function startUsage(Message $message) : string{
+    private function startUsage(Message $message) : string{
         $message_text = $message->message;
         switch ($message_text) {
             case '/start':
@@ -175,5 +181,52 @@ trait HelperTrait{
 
         $file = $fileFuture->await();
         return (new finfo())->buffer($buff, FILEINFO_MIME_TYPE);
+    }
+
+    private function upload(int|string $peer,string $url,int $replyToMsgId = null,string $file_name = null,callable $cb = null): void{
+        $remote_file = new RemoteUrl($url);
+        $mime_type = $this->extractMime(false,$remote_file,null,null,null);
+        switch (strtolower($mime_type)){
+            case 'video/mpeg':
+            case 'video/mp4':
+            case 'video/mpv':
+                $type = Video::class;
+                break;
+            case 'image/jpeg':
+            case 'image/png':
+                $type = Photo::class;
+                break;
+            case 'image/gif':
+                $type = Gif::class;
+                break;
+            case 'audio/flac':
+            case 'audio/ogg':
+            case 'audio/mpeg':
+            case 'audio/mp4':
+                $type = Audio::class;
+                break;
+            default:
+                $type = Document::class;
+                break;
+        }
+        //$this->wrapper->getAPI()->sendMedia($type,$peer,callback: $cb, fileName: $file_name, replyToMsgId: $replyToMsgId);
+        switch ($type){
+            case Document::class:
+                $this->sendDocument($peer,$remote_file, callback: $cb, fileName: $file_name, replyToMsgId: $replyToMsgId);
+                break;
+            case Video::class:
+                $this->sendVideo($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId);
+                break;
+            case Photo::class:
+                $this->sendPhoto($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId);
+                break;
+            case Audio::class:
+                $this->sendAudio($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId);
+                break;
+            case Gif::class:
+                $this->sendGif($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId);
+                break;
+        }
+
     }
 }
