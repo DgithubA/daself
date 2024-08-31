@@ -98,4 +98,10 @@ class Helper{
             return number_format($size/(1<<10),2)."KB";
         return number_format($size)." bytes";
     }
+    public static function myJson(string $text):string{
+        if(json_validate($text)){
+            return __('json',['json'=>$text]);
+        }
+        return __('code',['code'=>$text]);
+    }
 }

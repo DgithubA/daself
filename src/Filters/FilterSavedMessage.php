@@ -23,7 +23,7 @@ final class FilterSavedMessage extends Filter
     private readonly int $self_id;
     public function initialize(EventHandler $API): Filter
     {
-        $this->self_id = $API->getSelf()['id'];
+        $this->self_id = $API->getId('me');
         return $this;
         //return (new FiltersAnd(new FilterOutgoing(), new FilterPrivate()))->initialize($API);
     }

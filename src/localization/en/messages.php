@@ -3,7 +3,9 @@
 
 return [
     'json'=>'<pre language="json"><code>:json</code></pre>',
+    'code'=>'<code>:code</code>',
     'start_message'=>"the bot uptime is:\n:counter",
+    'mention'=>'<a href=":url">:name</a>',
     'memory_usage'=>"Memory now Usage : :usage <b>/</b>:real_usage <b>MB</b>\nMemory peak Usage :  :peak_usage <b>/</b>:real_peak_usage  <b>MB</b>",
     'restarting'=>"restarting...",
     'shutdown'=>"goodbye :)",
@@ -49,5 +51,8 @@ return [
     'url_not_found'=>'url not found. use upload:{URL} [FILENAME] or reply to messages contain url of file',
     'uploading'=>'uploading...',
     'upload_percent'=>'uploading <b>%:percent</b>',
-    'upload_successfully'=> "upload successfully.\nTotal upload time: <b>:time</b>\nTotal upload speed: <b>:speed</b> mbps"
+    'upload_successfully'=> "upload successfully.\nTotal upload time: <b>:time</b>\nTotal upload speed: <b>:speed</b> mbps",
+    'results'=>"<b>Results :</b>\n :data",
+    'without_database_connection'=>'without database connection.',
+    'error_reporting_message'=> "<b>#error as :function:</b>\n<b>in line:</b> :line\n<b>Message:</b>:message\n<b>on File:</b> :file",
 ];

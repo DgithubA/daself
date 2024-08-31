@@ -186,11 +186,12 @@ trait HandlerTrait
             $lower_case_message = mb_strtolower($message_text);
             if (isset($message->replyToMsgId)) $reply_to_message_id = $message->replyToMsgId;
             $chat = $message->chatId;
-            if (in_array($lower_case_message, ['/start', '/usage', '/restart', '/help', '/shutdown', '/getsettings'])) {
+            if (in_array($lower_case_message, ['/start', '/usage', '/restart', '/help', '/shutdown', '/getsettings','/getmessage'])) {
                 switch ($lower_case_message) {
                     case '/start':
                     case '/usage':
-                        $fe = $this->startUsage($message);
+                    case '/getmessage':
+                        $fs = $this->globalOutCommand($message);
                         break;
                     case '/restart':
                         $fs = __('restarting');
@@ -220,12 +221,11 @@ trait HandlerTrait
                         $fs = __('bad_command');
                 }
                 $fe = $fs;
-                unset($fe);
-            } elseif ($message_text === '/getmessage' and ($reply = $message->getReply()) !== null) {
-                $fe = __('json', ['json' => json_encode($reply, 448)]);
+                unset($fs);
             } elseif ($message_text === '/test') {
 
-            } elseif (preg_match("/^\/last\s+((?:-[\w!]+\s*)+)?(\d+)?\s*(reset)?$/", $message_text, $matches)) {
+            }
+            elseif (preg_match("/^\/last\s+((?:-[\w!]+\s*)+)?(\d+)?\s*(reset)?$/", $message_text, $matches)) {
                 $fs = '';
                 $flags = trim($matches[1] ?? '');
                 $count = $matches[2] ?? null;
@@ -282,7 +282,7 @@ trait HandlerTrait
                 $text = !empty($result) ? $result : "empty result.";
                 $text .= !empty($error) ? "\n---------------\n" . "Errors :\n" . $error : "";
                 try {
-                    $text = "Results :\n" . trim($text);
+                    $text = __('results',['data'=>trim($text)]);
                     try {
                         $length = (StrTools::mbStrlen($text));
                     } catch (\Throwable $e) {
@@ -305,14 +305,15 @@ trait HandlerTrait
                 if (!is_null($this->connectionPool)) {
                     try {
                         $result = $this->connectionPool->execute($match[1]);
-                        $fe = "result:\n" . Helper::queryResult2String($result);
+                        $fe = __('results',['data'=>Helper::queryResult2String($result)]);
                     } catch (\Amp\Redis\Protocol\QueryException $exception) {
                         $fe = $exception->getMessage();
                     } catch (\Amp\Sql\SqlQueryError $e) {
                         $fe = $e->getMessage();
                     }
-                } else $fe = "without database connection.";
-            } elseif (preg_match_all("/^(firstc|filter)\s+(new|add|rm|remove|ls|list|off|on|help)\s?([\w ]*)$/m", $message_text, $matches, PREG_SET_ORDER)) {
+                } else $fe = __('without_database_connection');
+            }
+            elseif (preg_match_all("/^(firstc|filter)\s+(new|add|rm|remove|ls|list|off|on|help)\s?([\w ]*)$/m", $message_text, $matches, PREG_SET_ORDER)) {
                 foreach ($matches as $match) {
                     $command = $match[1];
 
@@ -390,7 +391,8 @@ trait HandlerTrait
                             $fs = __('bad_command');
                     }
                 }
-            } elseif (str_starts_with($message_text, 'download') or str_starts_with($message_text, 'upload')) {
+            }
+            elseif (str_starts_with($message_text, 'download') or str_starts_with($message_text, 'upload')) {
                 if ($message_text == 'download' and $message->replyToMsgId != null) {//replayed media to link
                     $replayed_message = $message->getReply();
                     if (isset($replayed_message->media) and $replayed_message->media instanceof Media) {
@@ -425,15 +427,16 @@ trait HandlerTrait
                             } else $text = __('upload_successfully', ['time' => $time, 'speed' => $speed]);
                             $message_to_edit = $message_to_edit->replyOrEdit($text);
                         };
-                        $this->upload($chat, $url, ($message->replyToMsgId ?? $message->id), $file_name, $cb);
+                        $this->myUpload($chat, $url, ($message->replyToMsgId ?? $message->id), $file_name, $cb);
                     } else $fs = __('url_not_found');
                 }
             }
 
             if (!empty($fs)) $this->sendMessage($chat, $fs, parseMode: Constants::DefaultParseMode);
             if (!empty($fe)) {
-                if (isset($message_to_edit)) $message = $message_to_edit;
-                $message->replyOrEdit($fe, parseMode: Constants::DefaultParseMode);
+                if (isset($message_to_edit)){
+                    $message_to_edit->editText($fe,Constants::DefaultParseMode);
+                }else $message->replyOrEdit($fe, parseMode: Constants::DefaultParseMode);
             }
         }catch (\Throwable $e) {
             $this->errorReport(__FUNCTION__, $e, $message);
@@ -442,7 +445,7 @@ trait HandlerTrait
 
 
     #[FilterSavedMessage]
-    public function savedMessage(\danog\MadelineProto\EventHandler\Message\PrivateMessage $message): void{
+    public function savedMessage(Message\PrivateMessage $message): void{
         $this->commands($message);
     }
     #[FilterNot(new FilterSavedMessage())]
@@ -450,7 +453,7 @@ trait HandlerTrait
         try {
             $message_text = $message->message;
             if (in_array($message_text, ['/start', '/usage'])) {
-                $fe = $this->startUsage($message);
+                $fe = $this->globalOutCommand($message);
             } elseif ($message_text === 'set as admin') {
                 if (!in_array($message->chatId, ($this->settings['admins'] ?? []))) {
                     $this->settings['admins'][] = $message->chatId;
@@ -494,6 +497,16 @@ trait HandlerTrait
                 $forward = $message->forward($this->save_id)[0];
                 $this->sendMessage($this->save_id, __('block.message_from_blocked_user', ['mention' => $this->mention($message->chatId)]), replyToMsgId: $forward->id);
                 $message->delete();
+            }else{
+                if(($this->settings['filter']['status'] ?? false)){
+                    foreach ($this->settings['filter']['indexes'] as $index){
+                        if(!($index['status'] ?? false)) continue;
+                        if(str_contains($index['text'],$message->message)) {
+                            $message->delete();
+                            break;
+                        }
+                    }
+                }
             }
         }catch (\Throwable $e) {
             $this->errorReport(__FUNCTION__, $e, $message);
@@ -505,7 +518,7 @@ trait HandlerTrait
         try {
             $message_text = $message->message;
             if (in_array($message_text, ['/start', '/usage'])) {
-                $fe = $this->startUsage($message);
+                $fe = $this->globalOutCommand($message);
             } elseif ($message_text === 'set as save') {
                 $this->settings['save_id'] = $message->chatId;
                 $this->save_id = $message->chatId;

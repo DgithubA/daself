@@ -47,7 +47,8 @@ trait HelperTrait{
                 } else $tg = is_null($messageId) ? "tg://openmessage?chat_id=$id" : "https://t.me/c/$id/$messageId";
             }
             $name = !is_null($bname) ? $bname : $name;
-            return "[$name]($tg)";
+
+            return __('mention',['name'=>$name,'url'=>$tg]);
         } catch (\Throwable $e) {
             $this->errorReport(__function__, $e, json_encode($peerId) . "\n" . json_encode($messageId));
         }
@@ -68,13 +69,12 @@ trait HelperTrait{
                     "secondsdifspam" => $this->data['error_report']["anti_spam"]['secondsdifspam'] ?? 3,
                 ]
             ];
-
-            $message = "<b>#error as " . $function . ":</b>\n<b>in line:</b>" . $e->getLine() . "\n<b>Message:</b>" . $e->getMessage() . "\n<b>on File:</b>" . basename($e->getFile());
+            $message = __('error_reporting_message',['function'=>$function,'line'=>$e->getLine(),'message'=>$e->getMessage(),'file'=>$e->getFile()]);
             //$message = (string)$e;
             if ($error_report_setting['sendtrace']) {
                 $message .= PHP_EOL . "Trace:" . PHP_EOL;
-                $nowfile = preg_replace("/^(.+)\.php(.*)$/", "$1.php", __FILE__);
-                if (basename($e->getFile()) === basename($nowfile)) {
+                $is_bot_source = str_contains('\APP\\',$e->getFile());
+                if ($is_bot_source) {
                     $message .= Helper::myTrace($e->getTrace());
                 } else {
                     if (method_exists($e, 'getTLTrace')) {
@@ -112,9 +112,7 @@ trait HelperTrait{
                 }
 
                 try {
-                    if (isset($update_string)) {
-                        $this->sendMessage($report_to, $update_string, parseMode: Constants::DefaultParseMode);
-                    }
+                    if (isset($update_string)) $this->sendMessage($report_to, Helper::myJson($update_string), parseMode: Constants::DefaultParseMode);
                     $mid = $this->sendMessage($report_to,$message, parseMode: Constants::DefaultParseMode);
                     if ($report_to != $this->getId('me') and $error_report_setting['repto_s_m']) {
                         $mention = $this->mention($mid->chatId, $mid->id, "check it!");
@@ -141,7 +139,7 @@ trait HelperTrait{
         }
     }
 
-    private function startUsage(Message $message) : string{
+    private function globalOutCommand(Message $message) : string{
         $message_text = $message->message;
         switch ($message_text) {
             case '/start':
@@ -150,6 +148,9 @@ trait HelperTrait{
             case '/usage':
                 $fe = __('memory_usage', ['usage' => round(memory_get_usage() / 1024 / 1024, 2), 'real_usage' => round(memory_get_usage(true) / 1024 / 1024, 2),
                     'peak_usage' => round(memory_get_peak_usage() / 1024 / 1024, 2), 'real_peak_usage' => round(memory_get_peak_usage(true) / 1024 / 1024, 2)]);
+                break;
+            case '/getmessage':
+                if(($reply = $message->getReply())!==null) $fe = __('json', ['json' => json_encode($reply, 448)]);
                 break;
             default:
                 $fe = __('bad_command');

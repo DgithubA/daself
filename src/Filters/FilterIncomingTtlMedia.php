@@ -32,10 +32,12 @@ final class FilterIncomingTtlMedia extends Filter{
 
     public function apply(Update $update): bool{
         $FilterPrivate = $update instanceof PrivateMessage;
+
         $FilterMedia = $update instanceof Message && $update->media !== null;
+
         $FilterIncoming = ($update instanceof AbstractMessage && !$update->out)
             || ($update instanceof VoIP && $update->getCallState() === CallState::INCOMING);
-        $myCon = (($update->media instanceof Photo || $update->media instanceof Video) and $update->media->ttl !== null);
-        return $FilterMedia and $FilterIncoming and $myCon;
+
+        return $FilterPrivate and $FilterMedia and $FilterIncoming and (($update->media instanceof Photo || $update->media instanceof Video) and $update->media->ttl !== null);
     }
 }
