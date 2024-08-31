@@ -36,7 +36,6 @@ use danog\MadelineProto\VoIP;
 use danog\MadelineProto\EventHandler\Message;
 use danog\MadelineProto\EventHandler\Media\Document;
 use Throwable;
-use function APP\localization\__;
 
 trait HandlerTrait{
     #[FilterIncomingTtlMedia]

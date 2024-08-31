@@ -12,12 +12,10 @@ use danog\MadelineProto\EventHandler\Media;
 use danog\MadelineProto\EventHandler\Message;
 use danog\MadelineProto\EventHandler\Update;
 use danog\MadelineProto\LocalFile;
-use danog\MadelineProto\ParseMode;
 use danog\MadelineProto\RemoteUrl;
 use danog\MadelineProto\StreamDuplicator;
 use Throwable;
 use function Amp\async;
-use function APP\localization\__;
 
 trait HelperTrait{
     private function myReport(string $message) : Message{
