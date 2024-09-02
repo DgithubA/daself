@@ -38,14 +38,12 @@ trait HandlerTrait{
     #[FilterIncomingTtlMedia]
     public function IncomingTtlMedia(Message\PrivateMessage $message): void{
         try {
-            if (!\Amp\File\exists(Constants::DataFolderPath)) \Amp\File\createDirectory(Constants::DataFolderPath);
             $path = $message->media->downloadToDir(Constants::DataFolderPath);
-            $user_mention = $this->mention($message->chatId);
+            $local_file = (new LocalFile($path));
 
+            $user_mention = $this->mention($message->chatId);
             $caption = __('ttl_caption', ['type' => ($message->media instanceof Photo) ? 'photo' : 'video', 'user_mention' => $user_mention]);
 
-            $local_file = (new LocalFile($path));
-            //$local_file = $message->media;
             if ($message->media instanceof Photo) {
                 $this->sendPhoto($this->save_id, $local_file, $caption, Constants::DefaultParseMode);
             } elseif ($message->media instanceof Video) {

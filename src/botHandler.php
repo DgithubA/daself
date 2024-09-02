@@ -38,7 +38,7 @@ class botHandler extends SimpleEventHandler implements \Amp\Http\Server\RequestH
 
     public function onStart(): void{
         global $localization;
-        $this->logger("The bot was started!");
+        if (!\Amp\File\exists(Constants::DataFolderPath)) \Amp\File\createDirectory(Constants::DataFolderPath);
         $this->cancellation = new \Amp\DeferredCancellation();
 
         $db_setting = $this->getSettings()->getDb();
@@ -53,6 +53,7 @@ class botHandler extends SimpleEventHandler implements \Amp\Http\Server\RequestH
             $this->startWebServer();
         }
 
+        $this->logger("The bot was started!");
         $this->myReport("The bot was started!");
 
         if(isset($this->settings['local'])) $localization->setLocale($this->settings['local']);

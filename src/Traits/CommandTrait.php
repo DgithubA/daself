@@ -11,17 +11,17 @@ use danog\MadelineProto\StrTools;
 use danog\MadelineProto\EventHandler\Message;
 Trait CommandTrait{
     #[FilterNotEdited]
-    public function commands(Message\PrivateMessage $message_item): void{
+    public function commands(Message\PrivateMessage $message): void{
         try {
-            $message_text = trim($message_item->message);
+            $message_text = trim($message->message);
             $lower_case_message = mb_strtolower($message_text);
-            $chat = $message_item->chatId;
+            $chat = $message->chatId;
             if (in_array($lower_case_message, ['/start', '/usage', '/restart', '/help', '/shutdown', '/getsettings','/getmessage','/cancel','/test'])) {
                 switch ($lower_case_message) {
                     case '/start':
                     case '/usage':
                     case '/getmessage':
-                        $fe = $this->globalOutCommand($message_item);
+                        $fe = $this->globalOutCommand($message);
                         break;
                     case '/restart':
                         $fs = __('restarting');
@@ -52,7 +52,6 @@ Trait CommandTrait{
                         $fe = __('canceled');
                         break;
                     case '/test':
-                        $fe = 'test';
                         break;
                     default:
                         $fe = __('bad_command');
@@ -93,7 +92,7 @@ Trait CommandTrait{
 
             }
             elseif (preg_match("/^\/(php|cli|run)\s?(.+)$/su", $message_text, $match)) {
-                $message_to_edit = $message_item->reply(__('running'));
+                $message_to_edit = $message->reply(__('running'));
                 $this->logger("start runner:");
                 $code = $match[2];
                 $torun = "return (function () use 
@@ -109,7 +108,7 @@ Trait CommandTrait{
                     $result .= ob_get_contents() . "\n";
                 } catch (\Throwable $e) {
                     $error .= $e->getMessage() . "\n";
-                    $error .= Helper::myTrace($e->getTrace()) . "\n";
+                    $error .= $e->getTraceAsString() . "\n";
                 }
                 ob_end_clean();
                 $result = trim($result);
@@ -129,7 +128,7 @@ Trait CommandTrait{
                 $this->logger("end runner");
             }
             elseif (preg_match("/^\/query\s?(.+)$/su", $message_text, $match)) {
-                $message_to_edit = $message_item->reply(__('running'), parseMode: Constants::DefaultParseMode);
+                $message_to_edit = $message->reply(__('running'), parseMode: Constants::DefaultParseMode);
                 if (!is_null($this->databaseService)) {
                     try {
                         $result = $this->databaseService->execute($match[1]);
@@ -221,9 +220,9 @@ Trait CommandTrait{
                 }
             }
             elseif (str_starts_with($message_text, '/download') or str_starts_with($message_text, '/upload')) {
-                if ($message_text == '/download' and $message_item->replyToMsgId != null) {//replayed media to link
-                    $message_to_edit = $message_item->replyOrEdit(__('downloading'));
-                    $replayed_message = $message_item->getReply();
+                if ($message_text == '/download' and $message->replyToMsgId != null) {//replayed media to link
+                    $message_to_edit = $message->replyOrEdit(__('downloading'));
+                    $replayed_message = $message->getReply();
                     if (isset($replayed_message->media) and $replayed_message->media instanceof Media) {
                         $media = $replayed_message->media;
                         if ($media->size > 10 * 1024 * 1024) {//size is less than 10MB
@@ -240,15 +239,15 @@ Trait CommandTrait{
                         } else $fe = __('file_is_too_small', ['size' => Helper::humanFileSize($media->size), 'minimumSize' => '10MB']);
                     } else $fe = __('replayed_no_media');
                 } elseif (str_starts_with($message_text, '/upload')) {
-                    if (preg_match('/^\/upload\s?(.*)$/mi',$message_text,$match) and ($replayed_message = $message_item->getReply()) !== null and is_string(($replayed_message_message = $replayed_message->message)) and preg_match('~(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))\s?(\w*)~im', $replayed_message_message,$matches)) {
+                    if (preg_match('/^\/upload\s?(.*)$/mi',$message_text,$match) and ($replayed_message = $message->getReply()) !== null and is_string(($replayed_message_message = $replayed_message->message)) and preg_match('~(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))\s?(\w*)~im', $replayed_message_message,$matches)) {
                         $url = $matches[1];
                         $file_name = $matches[2];
                         if(!empty($match[1])) $file_name = $match[1];
-                        $message_to_edit = $message_item->replyOrEdit(__('uploading'));
+                        $message_to_edit = $message->replyOrEdit(__('uploading'));
                     } elseif (preg_match('/^\/upload\s(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))\s?([\w\.]*)$/im', $message_text,$matches)) {
                         $url = $matches[1];
                         $file_name = $matches[2];
-                        $message_to_edit = $message_item->reply(__('uploading'));
+                        $message_to_edit = $message->reply(__('uploading'));
                     }
 
                     if(isset($url)){
@@ -275,7 +274,7 @@ Trait CommandTrait{
                             }
                         };
 
-                        $this->myUpload($chat, $url, ($message_item->replyToMsgId ?? $message_item->id), $file_name, $cb);
+                        $this->myUpload($chat, $url, ($message->replyToMsgId ?? $message->id), $file_name, $cb);
                     } else {
                         $text = __('url_not_found');
                         if($message_text === '/upload') {
@@ -287,8 +286,10 @@ Trait CommandTrait{
             elseif (str_starts_with($message_text,'/getlinkmessage')){
                 if(preg_match('/^\/getlinkmessage\s(.+)$/m',$message_text,$matches)){
                     $url = $matches[1];
-                }elseif($message_text === '/getlinkmessage' and ($reply = $message_item->getReply()) !== null) {
+                    $reply2id = $message->id;
+                }elseif($message_text === '/getlinkmessage' and ($reply = $message->getReply()) !== null) {
                     $url = $reply->message;
+                    $reply2id = $reply->id;
                 }
                 if(isset($url) and preg_match('~https:\/\/t\.me\/?c?\/([\d\w]+)\/([\d-]+)~m',$url,$matches)){
                     $channel = $matches[1];
@@ -307,11 +308,28 @@ Trait CommandTrait{
 
                 if(isset($channel) and isset($message_ids)){
                     try {
-                        $messages = $this->channels->getMessages($this->getId($channel),$message_ids);
+                        $messages = $this->channels->getMessages(channel: $this->getId($channel),id: $message_ids);
                         foreach ($messages['messages'] as $message_item) {
                             if(isset($message_item['media'])){
-                                $this->messages->sendMedia(peer: $chat,media: $message_item['media'],message: $message_item['']);
-                            }else $this->sendMessage($chat,$message_item['message']);
+                                $path = $this->downloadToDir($message_item['media'],Constants::DataFolderPath);
+                                $local_file = (new LocalFile($path));
+
+                                switch ($message_item['media']['_']) {
+                                    case 'messageMediaPhoto':
+                                        $this->sendPhoto($chat,$local_file,$message_item['message'],replyToMsgId: $reply2id);
+                                        break;
+                                    case 'messageMediaAudio':
+                                        $this->sendAudio($chat,$local_file,caption: $message_item['message'],replyToMsgId: $reply2id,cancellation: $this->cancellation->getCancellation());
+                                        break;
+                                    case 'messageMediaVideo':
+                                        $this->sendVideo($chat,$local_file,caption: $message_item['message'],replyToMsgId: $reply2id,cancellation: $this->cancellation->getCancellation());
+                                        break;
+                                    case 'messageMediaFile':
+                                        $this->sendDocument($chat,$local_file,caption: $message_item['message'],replyToMsgId: $reply2id,cancellation: $this->cancellation->getCancellation());
+                                        break;
+                                }
+                                \Amp\File\deleteFile($path);
+                            }else $this->sendMessage($chat,$message_item['message'],replyToMsgId: $reply2id);
                         }
                     }catch (RPCErrorException $e){
                         $fe = $e->getMessage();
@@ -325,10 +343,10 @@ Trait CommandTrait{
             if (!empty($fe)) {
                 if (isset($message_to_edit)){
                     $message_to_edit->editText($fe,Constants::DefaultParseMode);
-                }else $message_item->replyOrEdit($fe, parseMode: Constants::DefaultParseMode);
+                }else $message->replyOrEdit($fe, parseMode: Constants::DefaultParseMode);
             }
         }catch (\Throwable $e) {
-            $this->errorReport(__FUNCTION__, $e, $message_item);
+            $this->errorReport(__FUNCTION__, $e, $message);
         }
     }
 
