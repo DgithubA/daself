@@ -56,5 +56,7 @@ return [
     'without_database_connection'=>'without database connection.',
     'error_reporting_message'=> "<b>#error as :function:</b>\n<b>in line:</b> :line\n<b>Message:</b>:message\n<b>on File:</b> :file",
     'downloading'=>'downloading...',
-    'canceled'=>'canceled.!'
+    'canceled'=>'canceled.!',
+    'channel_is_private'=>'channel is private. join with join link.',
+    'getmessagelink_bad_command'=> "bad command. reply to message contain url or /getmessagelink [link]\nurl sample: https://t.me/telegram/2|https://t.me/example/5-10"
 ];

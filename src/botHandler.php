@@ -48,8 +48,10 @@ class botHandler extends SimpleEventHandler implements \Amp\Http\Server\RequestH
             $this->save_id = $this->settings['save_id'];
         }else $this->save_id = $this->getSelf()['id'] ?? $this->getReportPeers()[0];
 
-        $this->initWebServer();
-        $this->startWebServer();
+        if(method_exists($this,'initWebServer')) {
+            $this->initWebServer();
+            $this->startWebServer();
+        }
 
         $this->myReport("The bot was started!");
 

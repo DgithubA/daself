@@ -19,21 +19,16 @@ use danog\MadelineProto\EventHandler\Filter\FilterCommentReply;
 use danog\MadelineProto\EventHandler\Filter\FilterGroup;
 use danog\MadelineProto\EventHandler\Filter\FilterIncoming;
 use danog\MadelineProto\EventHandler\Filter\FilterMedia;
-use danog\MadelineProto\EventHandler\Filter\FilterNotEdited;
 use danog\MadelineProto\EventHandler\Filter\FilterOutgoing;
 use danog\MadelineProto\EventHandler\Filter\FilterPrivate;
 use danog\MadelineProto\EventHandler\Filter\FilterService;
-use danog\MadelineProto\EventHandler\Media;
-use danog\MadelineProto\EventHandler\Media\Audio;
-use danog\MadelineProto\EventHandler\Media\Gif;
 use danog\MadelineProto\EventHandler\Media\Photo;
 use danog\MadelineProto\EventHandler\Media\Video;
 use danog\MadelineProto\EventHandler\Pinned;
+use danog\MadelineProto\EventHandler\SimpleFilter\Incoming;
 use danog\MadelineProto\EventHandler\Typing;
 use danog\MadelineProto\EventHandler\Update;
 use danog\MadelineProto\LocalFile;
-use danog\MadelineProto\RPCErrorException;
-use danog\MadelineProto\StrTools;
 use danog\MadelineProto\VoIP;
 use danog\MadelineProto\EventHandler\Message;
 use Throwable;
@@ -183,7 +178,8 @@ trait HandlerTrait{
     }
 
     #[FilterSavedMessage]
-    public function savedMessage(Message\PrivateMessage $message): void{
+    public function savedMessage(Incoming&Message\PrivateMessage $message): void{
+        $this->logger('new message in savedMessage id:'.$message->id);
         $this->commands($message);
     }
     #[FilterNot(new FilterSavedMessage())]

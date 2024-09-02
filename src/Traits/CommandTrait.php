@@ -11,17 +11,17 @@ use danog\MadelineProto\StrTools;
 use danog\MadelineProto\EventHandler\Message;
 Trait CommandTrait{
     #[FilterNotEdited]
-    public function commands(Message\PrivateMessage $message): void{
+    public function commands(Message\PrivateMessage $message_item): void{
         try {
-            $message_text = trim($message->message);
+            $message_text = trim($message_item->message);
             $lower_case_message = mb_strtolower($message_text);
-            $chat = $message->chatId;
-            if (in_array($lower_case_message, ['/start', '/usage', '/restart', '/help', '/shutdown', '/getsettings','/getmessage'])) {
+            $chat = $message_item->chatId;
+            if (in_array($lower_case_message, ['/start', '/usage', '/restart', '/help', '/shutdown', '/getsettings','/getmessage','/cancel','/test'])) {
                 switch ($lower_case_message) {
                     case '/start':
                     case '/usage':
                     case '/getmessage':
-                        $fs = $this->globalOutCommand($message);
+                        $fe = $this->globalOutCommand($message_item);
                         break;
                     case '/restart':
                         $fs = __('restarting');
@@ -29,15 +29,15 @@ Trait CommandTrait{
                         $this->restart();
                         break;
                     case '/help':
-                        $fs = "<code>/start</code> : get bot status and uptime.\n<code>/restart</code> : restart bot.\n<code>/usage</code> : get Memory Usage.\n<code>/shutdown</code> : shutdown bot.\n<code>/getSettings</code> : json encoded settings.\n<code>/shutdown</code> : shutdown bot.\n";
-                        $fs .= "\n<code>/last [FLAGS] [COUNT] [reset]</code> : get new message json encoded.";
+                        $fe = "<code>/start</code> : get bot status and uptime.\n<code>/restart</code> : restart bot.\n<code>/usage</code> : get Memory Usage.\n<code>/shutdown</code> : shutdown bot.\n<code>/getSettings</code> : json encoded settings.\n<code>/shutdown</code> : shutdown bot.\n";
+                        $fe .= "\n<code>/last [FLAGS] [COUNT] [reset]</code> : get new message json encoded.";
                         $x = 0;
                         foreach (Constants::LAST_FLAG as $key => $value) {
                             $fs .= ($x % 2 == 0 ? "\n" : '') . "   <code>$key</code> : $value";
                             $x++;
                         }
-                        $fs .= "\n<code>/run [CODE]</code> run php code.(access to \$message, \$chat,\$reply_to_message_id variable)";
-                        $fs .= "\n<code>/query [QUERY]</code> run database query.";
+                        $fe .= "\n<code>/run [CODE]</code> run php code.(access to \$message, \$chat,\$reply_to_message_id variable)";
+                        $fe .= "\n<code>/query [QUERY]</code> run database query.";
                         break;
                     case '/shutdown':
                         $fs = __('shutdown');
@@ -45,18 +45,18 @@ Trait CommandTrait{
                         $this->stop();
                         break;
                     case '/getsettings':
-                        $fs = __('json', ['json' => json_encode($this->settings, 448)]);
+                        $fe = __('json', ['json' => json_encode($this->settings, 448)]);
+                        break;
+                    case '/cancel':
+                        $this->cancellation->cancel();
+                        $fe = __('canceled');
+                        break;
+                    case '/test':
+                        $fe = 'test';
                         break;
                     default:
-                        $fs = __('bad_command');
+                        $fe = __('bad_command');
                 }
-                $fe = $fs;
-                unset($fs);
-            } elseif ($message_text === '/cancel') {
-                $this->cancellation->cancel();
-                $fe = __('canceled');
-            } elseif ($message_text === '/test') {
-                $fs = 'test';
             }
             elseif (preg_match("/^\/last\s+((?:-[\w!]+\s*)+)?(\d+)?\s*(reset)?$/", $message_text, $matches)) {
                 $fs = '';
@@ -91,8 +91,9 @@ Trait CommandTrait{
                 }
                 $this->settings['last'] = $last;
 
-            } elseif (preg_match("/^\/(php|cli|run)\s?(.+)$/su", $message_text, $match)) {
-                $mid = $message->reply(__('running'));
+            }
+            elseif (preg_match("/^\/(php|cli|run)\s?(.+)$/su", $message_text, $match)) {
+                $message_to_edit = $message_item->reply(__('running'));
                 $this->logger("start runner:");
                 $code = $match[2];
                 $torun = "return (function () use 
@@ -108,6 +109,7 @@ Trait CommandTrait{
                     $result .= ob_get_contents() . "\n";
                 } catch (\Throwable $e) {
                     $error .= $e->getMessage() . "\n";
+                    $error .= Helper::myTrace($e->getTrace()) . "\n";
                 }
                 ob_end_clean();
                 $result = trim($result);
@@ -116,25 +118,18 @@ Trait CommandTrait{
                 $text .= !empty($error) ? "\n---------------\n" . "Errors :\n" . $error : "";
                 try {
                     $text = __('results',['data'=>trim($text)]);
-                    try {
-                        $length = (StrTools::mbStrlen($text));
-                    } catch (\Throwable $e) {
-                        $length = mb_strlen($text);
-                    }
-                    $entities = [
-                        ["_" => "messageEntityBold", "offset" => 0, "length" => 9],
-                        ["_" => "messageEntityCode", "offset" => 10, "length" => $length]];
-                    $this->messages->editMessage(peer: $chat, id: $mid->id, message: $text, entities: $entities);
+                    $message_to_edit->editText($text,parseMode: Constants::DefaultParseMode);
                 } catch (\Throwable $e) {
-                    $mid->editText("#error for edit result:\n<code>" . $e->getMessage() . "</code>\nResult file:👇🏻", parseMode: Constants::DefaultParseMode);
+                    $message_to_edit->editText("#error for edit result:\n<code>" . $e->getMessage() . "</code>\nResult file:👇🏻", parseMode: Constants::DefaultParseMode);
                     $file_path = './data/run-result.txt';
                     \Amp\File\write($file_path, $text);
-                    $this->sendDocument($chat, (new LocalFile($file_path)), caption: '<code>' . $match[2] . '</code>', parseMode: Constants::DefaultParseMode, fileName: 'run-result.txt', mimeType: 'text/plain', replyToMsgId: $mid->id);
+                    $this->sendDocument($chat, (new LocalFile($file_path)), caption: '<code>' . $match[2] . '</code>', parseMode: Constants::DefaultParseMode, fileName: 'run-result.txt', mimeType: 'text/plain', replyToMsgId: $message_to_edit->id);
                     \Amp\File\deleteFile($file_path);
                 }
                 $this->logger("end runner");
-            } elseif (preg_match("/^\/query\s?(.+)$/su", $message_text, $match)) {
-                $message_to_edit = $message->reply(__('running'), parseMode: Constants::DefaultParseMode);
+            }
+            elseif (preg_match("/^\/query\s?(.+)$/su", $message_text, $match)) {
+                $message_to_edit = $message_item->reply(__('running'), parseMode: Constants::DefaultParseMode);
                 if (!is_null($this->databaseService)) {
                     try {
                         $result = $this->databaseService->execute($match[1]);
@@ -226,9 +221,9 @@ Trait CommandTrait{
                 }
             }
             elseif (str_starts_with($message_text, '/download') or str_starts_with($message_text, '/upload')) {
-                if ($message_text == '/download' and $message->replyToMsgId != null) {//replayed media to link
-                    $message_to_edit = $message->replyOrEdit(__('downloading'));
-                    $replayed_message = $message->getReply();
+                if ($message_text == '/download' and $message_item->replyToMsgId != null) {//replayed media to link
+                    $message_to_edit = $message_item->replyOrEdit(__('downloading'));
+                    $replayed_message = $message_item->getReply();
                     if (isset($replayed_message->media) and $replayed_message->media instanceof Media) {
                         $media = $replayed_message->media;
                         if ($media->size > 10 * 1024 * 1024) {//size is less than 10MB
@@ -245,21 +240,23 @@ Trait CommandTrait{
                         } else $fe = __('file_is_too_small', ['size' => Helper::humanFileSize($media->size), 'minimumSize' => '10MB']);
                     } else $fe = __('replayed_no_media');
                 } elseif (str_starts_with($message_text, '/upload')) {
-                    if (preg_match('/^\/upload\s?(.*)$/mi',$message_text,$match) and ($replayed_message = $message->getReply()) !== null and is_string(($replayed_message_message = $replayed_message->message)) and preg_match('~(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))\s?(\w*)~im', $replayed_message_message,$matches)) {
+                    if (preg_match('/^\/upload\s?(.*)$/mi',$message_text,$match) and ($replayed_message = $message_item->getReply()) !== null and is_string(($replayed_message_message = $replayed_message->message)) and preg_match('~(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))\s?(\w*)~im', $replayed_message_message,$matches)) {
                         $url = $matches[1];
                         $file_name = $matches[2];
                         if(!empty($match[1])) $file_name = $match[1];
-                        $message_to_edit = $message->replyOrEdit(__('uploading'));
+                        $message_to_edit = $message_item->replyOrEdit(__('uploading'));
                     } elseif (preg_match('/^\/upload\s(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))\s?([\w\.]*)$/im', $message_text,$matches)) {
                         $url = $matches[1];
                         $file_name = $matches[2];
-                        $message_to_edit = $message->reply(__('uploading'));
+                        $message_to_edit = $message_item->reply(__('uploading'));
                     }
 
                     if(isset($url)){
                         $file_name = !empty($file_name) ? $file_name : null;
                         $this->logger("upload url:$url filename:$file_name");
                         $cb = function ($percent, $speed, $time) use ($message_to_edit) {
+                            static $status = true;
+                            if(!$status)return;
                             static $prev_time = 0;
                             static $prev_percent = -1;
                             $now = microtime(true);
@@ -274,11 +271,11 @@ Trait CommandTrait{
                             try {
                                 $message_to_edit->editText($text,parseMode: Constants::DefaultParseMode);
                             }catch (RPCErrorException $e){
-
+                                if($e->rpc !== 'MESSAGE_NOT_MODIFIED') $status = false;
                             }
                         };
 
-                        $this->myUpload($chat, $url, ($message->replyToMsgId ?? $message->id), $file_name, $cb);
+                        $this->myUpload($chat, $url, ($message_item->replyToMsgId ?? $message_item->id), $file_name, $cb);
                     } else {
                         $text = __('url_not_found');
                         if($message_text === '/upload') {
@@ -287,15 +284,51 @@ Trait CommandTrait{
                     }
                 }
             }
+            elseif (str_starts_with($message_text,'/getlinkmessage')){
+                if(preg_match('/^\/getlinkmessage\s(.+)$/m',$message_text,$matches)){
+                    $url = $matches[1];
+                }elseif($message_text === '/getlinkmessage' and ($reply = $message_item->getReply()) !== null) {
+                    $url = $reply->message;
+                }
+                if(isset($url) and preg_match('~https:\/\/t\.me\/?c?\/([\d\w]+)\/([\d-]+)~m',$url,$matches)){
+                    $channel = $matches[1];
+                    $message_ids = $matches[2];
+                    if(is_numeric($matches[2])){
+                        $message_ids = [(int)$matches[2]];
+                    }elseif(preg_match('/^(\d+)-(\d+)$/',$matches[2],$matches2)){
+                        if($matches2[1] < $matches[2]){
+                            $message_ids = [];
+                            for ($i = $matches2[1] ; $i <= $matches[2]; $i++) {
+                                $message_ids[] = $i;
+                            }
+                        }
+                    }
+                }
+
+                if(isset($channel) and isset($message_ids)){
+                    try {
+                        $messages = $this->channels->getMessages($this->getId($channel),$message_ids);
+                        foreach ($messages['messages'] as $message_item) {
+                            if(isset($message_item['media'])){
+                                $this->messages->sendMedia(peer: $chat,media: $message_item['media'],message: $message_item['']);
+                            }else $this->sendMessage($chat,$message_item['message']);
+                        }
+                    }catch (RPCErrorException $e){
+                        $fe = $e->getMessage();
+                    }
+                }else throw new \Exception('getmessagelink_bad_command');
+            }
+
+            $this->logger("command Response fs: ".(!empty($fs) ? "`$fs`" : 'null')."  fe: " . (!empty($fe) ? "`$fe`" : 'null'));
 
             if (!empty($fs)) $this->sendMessage($chat, $fs, parseMode: Constants::DefaultParseMode);
             if (!empty($fe)) {
                 if (isset($message_to_edit)){
                     $message_to_edit->editText($fe,Constants::DefaultParseMode);
-                }else $message->replyOrEdit($fe, parseMode: Constants::DefaultParseMode);
+                }else $message_item->replyOrEdit($fe, parseMode: Constants::DefaultParseMode);
             }
         }catch (\Throwable $e) {
-            $this->errorReport(__FUNCTION__, $e, $message);
+            $this->errorReport(__FUNCTION__, $e, $message_item);
         }
     }
 
@@ -317,5 +350,7 @@ Trait CommandTrait{
         }
         return $fe;
     }
+
+
 
 }
