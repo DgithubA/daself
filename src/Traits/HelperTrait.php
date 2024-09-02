@@ -5,6 +5,8 @@ namespace APP\Traits;
 use Amp\ByteStream\Pipe;
 use Amp\ByteStream\ReadableStream;
 use Amp\Cancellation;
+use Amp\Http\Server\Request;
+use Amp\Http\Server\Response;
 use APP\Constants\Constants;
 use APP\Helpers\Helper;
 use danog\MadelineProto\BotApiFileId;

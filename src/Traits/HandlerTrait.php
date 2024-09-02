@@ -36,8 +36,8 @@ use danog\MadelineProto\VoIP;
 use danog\MadelineProto\EventHandler\Message;
 use Throwable;
 
-trait HandlerTrait
-{
+trait HandlerTrait{
+
     #[FilterIncomingTtlMedia]
     public function IncomingTtlMedia(Message\PrivateMessage $message): void{
         try {
@@ -302,9 +302,9 @@ trait HandlerTrait
                 $this->logger("end runner");
             } elseif (preg_match("/^\/query\s?(.+)$/su", $message_text, $match)) {
                 $message_to_edit = $message->reply(__('running'), parseMode: Constants::DefaultParseMode);
-                if (!is_null($this->connectionPool)) {
+                if (!is_null($this->databaseService)) {
                     try {
-                        $result = $this->connectionPool->execute($match[1]);
+                        $result = $this->databaseService->execute($match[1]);
                         $fe = __('results',['data'=>Helper::queryResult2String($result)]);
                     } catch (\Amp\Redis\Protocol\QueryException $exception) {
                         $fe = $exception->getMessage();
@@ -402,7 +402,7 @@ trait HandlerTrait
                             if(isset($this->settings['DOWNLOAD_SCRIPT_URL'])) $download_script_url = $this->settings['DOWNLOAD_SCRIPT_URL'];
                             try {
                                 $download_link = $this->getDownloadLink($media, $download_script_url);
-                                $fs = $download_link;
+                                $fs = __('code',['code'=>$download_link]);
                             } catch (\Exception $e) {
                                 $fs = __('download_script_url_wrong');
                             }
@@ -453,7 +453,7 @@ trait HandlerTrait
     public function OutgoingPrivateMessage(Message\PrivateMessage $message): void{
         try {
             $message_text = $message->message;
-            if (in_array($message_text, ['/start', '/usage'])) {
+            if (in_array($message_text, Constants::GLOBAL_COMMAND)) {
                 $fe = $this->globalOutCommand($message);
             } elseif ($message_text === 'set as admin') {
                 if (!in_array($message->chatId, ($this->settings['admins'] ?? []))) {
@@ -518,7 +518,7 @@ trait HandlerTrait
     public function outgoingChannelGroupMessage(Message\ChannelMessage|Message\GroupMessage $message): void{
         try {
             $message_text = $message->message;
-            if (in_array($message_text, ['/start', '/usage'])) {
+            if (in_array($message_text, Constants::GLOBAL_COMMAND)) {
                 $fe = $this->globalOutCommand($message);
             } elseif ($message_text === 'set as save') {
                 $this->settings['save_id'] = $message->chatId;

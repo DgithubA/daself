@@ -1,12 +1,10 @@
 <?php
-
+date_default_timezone_set("Asia/Tehran");
 
 require_once 'vendor/autoload.php';
 
-date_default_timezone_set("Asia/Tehran");
+
 use danog\MadelineProto\Settings;
-
-
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->safeLoad();
 
@@ -23,6 +21,7 @@ if ($_ENV['DB_CONNECTION'] == 'redis') {
 } elseif ($_ENV['DB_CONNECTION'] == 'mysql') {
     $db = (new Settings\Database\Mysql())->setUri('tcp://' . $def_host . ':' . $_ENV['DB_PORT'])->setDatabase($_ENV['DB_DATABASE'] ?? 'daself')->setPassword($_ENV['DB_PASSWORD'] ?? '')->setUsername($_ENV['DB_USERNAME'] ?? 'root');
 } else $db = (new Settings\Database\Memory());
+if(!$db instanceof Settings\Database\Memory) $db->setEphemeralFilesystemPrefix('sessions');
 
 $settings->setDb($db);
 $session_dir = $_ENV['SESSION_DIR'];

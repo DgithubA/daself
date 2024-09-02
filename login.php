@@ -12,7 +12,7 @@ try {
     exit(1);
 }
 
-if ($api->getAuthorization() !== API::LOGGED_IN || (isset($argv[1]) and $argv[1] == '--login')) {
+if ($api->getAuthorization() !== API::LOGGED_IN) {
     $get_self = $api->start();
 }
 
@@ -20,5 +20,4 @@ if (!$api->isSelfUser()) {
     echo "Please login as user.";
     $api->logout();
     rmdir($session_dir);
-    exit(1);
 } else echo "Successfully login in as user.";
