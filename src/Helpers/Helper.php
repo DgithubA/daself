@@ -83,10 +83,11 @@ class Helper{
         return $str;
     }
 
-    public static function extracturls(string $test):array|false{
+    public static function extractUrls(string $test):array|false{
         if(preg_match_all('~(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))~', $test,$matches)){
             return $matches[0];
-        }else return false;
+        }
+        return false;
     }
 
     public static function humanFileSize($size,$unit="") :string{

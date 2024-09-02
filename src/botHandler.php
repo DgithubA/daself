@@ -10,9 +10,10 @@ use APP\Traits\ServerTrait;
 use danog\MadelineProto\EventHandler\Plugin\RestartPlugin;
 use danog\MadelineProto\Settings\Database\Memory;
 use danog\MadelineProto\SimpleEventHandler;
+use Revolt\EventLoop;
 
 
-class botHandler extends SimpleEventHandler{
+class botHandler extends SimpleEventHandler implements \Amp\Http\Server\RequestHandler{
 
     use HandlerTrait , HelperTrait , ServerTrait;
     public int $save_id;
@@ -29,6 +30,7 @@ class botHandler extends SimpleEventHandler{
     }
 
     public function onStop(): void{
+        $this->logger('onStop');
         $this->stopWebServer();
     }
 

@@ -394,29 +394,30 @@ trait HandlerTrait{
             }
             elseif (str_starts_with($message_text, 'download') or str_starts_with($message_text, 'upload')) {
                 if ($message_text == 'download' and $message->replyToMsgId != null) {//replayed media to link
+                    $message_to_edit = $message->replyOrEdit(__('downloading'));
                     $replayed_message = $message->getReply();
                     if (isset($replayed_message->media) and $replayed_message->media instanceof Media) {
                         $media = $replayed_message->media;
                         if ($media->size > 10 * 1024 * 1024) {//size is less than 10MB
-                            $download_script_url = !empty($_ENV['DOWNLOAD_SCRIPT_URL']) ? $_ENV['DOWNLOAD_SCRIPT_URL'] : null;
-                            if(isset($this->settings['DOWNLOAD_SCRIPT_URL'])) $download_script_url = $this->settings['DOWNLOAD_SCRIPT_URL'];
+                            $download_script_url = !empty($_ENV['DL_SERVER_HOST']) ? $_ENV['DL_SERVER_HOST'] : null;
+                            if(isset($this->settings['DL_SERVER_HOST'])) $download_script_url = $this->settings['DL_SERVER_HOST'];
                             try {
                                 $download_link = $this->getDownloadLink($media, $download_script_url);
-                                $fs = __('code',['code'=>$download_link]);
+                                $fe = __('code',['code'=>htmlspecialchars($download_link)]);
                             } catch (\Exception $e) {
-                                $fs = __('download_script_url_wrong');
+                                $fe = __('download_script_url_wrong');
                             }
-                        } else $fs = __('file_is_too_small', ['size' => Helper::humanFileSize($media->size), 'minimumSize' => '10MB']);
-                    } else $fs = __('replayed_no_media');
+                        } else $fe = __('file_is_too_small', ['size' => Helper::humanFileSize($media->size), 'minimumSize' => '10MB']);
+                    } else $fe = __('replayed_no_media');
                 } elseif (str_starts_with($message_text, 'upload')) {
+                    $message_to_edit = $message->reply(__('uploading'));
                     if ($message_text == 'upload' and $message->replyToMsgId !== null) {
                         $replayed_message = $message->getReply();
                         $message_contain_url = $replayed_message->message;
                     } elseif (str_starts_with($message_text, 'upload:')) {
                         $message_contain_url = $message_text;
                     }
-                    if ($urls = Helper::extracturls($message_contain_url)) {
-                        $message_to_edit = $message->reply(__('uploading'));
+                    if (isset($message_contain_url) and $urls = Helper::extractUrls($message_contain_url)) {
                         $url = $urls[0];
                         $file_name = null;
                         if (str_starts_with($message_text, 'upload:')) {

@@ -32,29 +32,6 @@ services:
     volumes:
       - ./redis:/data
     command: redis-server --save 60 1 --loglevel warning
-
-
-  php-fpm:
-    image: hub.madelineproto.xyz/danog/madelineproto
-    container_name: php-fpm
-    restart: always
-    volumes:
-      - ./:/app
-    command: ["php-fpm"]
-
-  web_server:
-    image: nginx:latest
-    container_name: web_server
-    restart: unless-stopped
-    volumes:
-      - ./:/var/www/html
-      - ./web.conf:/etc/nginx/conf.d/default.conf
-    depends_on:
-      php-fpm:
-        condition: service_started
-    ports:
-      - 8000:80
-
   bot:
     image: hub.madelineproto.xyz/danog/madelineproto
     container_name: bot
@@ -70,4 +47,6 @@ services:
     tty: true
     volumes:
       - .:/app
+    ports:
+      - 8000:8000
     command: ["php", "run.php"]

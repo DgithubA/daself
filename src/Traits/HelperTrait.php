@@ -159,8 +159,7 @@ trait HelperTrait{
         }
         return $fe;
     }
-    private function extractMime(bool $secret, Message|Media|LocalFile|RemoteUrl|BotApiFileId|ReadableStream &$file, ?string $fileName, ?callable $callback, ?Cancellation $cancellation): string
-    {
+    private function extractMime(bool $secret, Message|Media|LocalFile|RemoteUrl|BotApiFileId|ReadableStream $file, ?string $fileName, ?callable $callback, ?Cancellation $cancellation): string{
         $size = 0;
         $file = $this->getStream($file, $cancellation, $size);
         $p = new Pipe(1024*1024);
