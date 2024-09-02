@@ -68,26 +68,18 @@ class Helper{
         return str_ends_with($text,$not);
     }
 
-    public static function myTrace(array $trace):string{
+    public static function myTrace(array $trace,string $files_q = null):string{
         $str = "";
-        $nowfile = preg_replace("/^(.+)\.php(.*)$/", "$1.php", __FILE__);
         foreach ($trace as $k => $frame) {
-            if(isset($frame['file']) and basename($frame['file']) === basename($nowfile)){
-                $str .= ('`#'.$k.'` ').
-                    (isset($frame['function']) ? '**'.$frame['function'].'**' :'') .
-                    ('('.$frame['line'].')').
-                    (isset($frame['args']) ? '('.json_encode($frame['args']).')' : '');
-            }
+            if($files_q != null and isset($frame['file']) and !str_contains($frame['file'],$files_q)) continue;
+
+            $args_str = !empty($frame['args']) ? implode(',',$frame['args']) : '';
+            $str .= ('#'.$k.' ').
+                ("\t".basename($frame['file'])).('('.$frame['line'].')')."\n\t".
+                (isset($frame['function']) ? "".$frame['function'].'('.$args_str.')' :'');
             $str .= PHP_EOL;
         }
         return $str;
-    }
-
-    public static function extractUrls(string $test):array|false{
-        if(preg_match_all('~(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))~', $test,$matches)){
-            return $matches[0];
-        }
-        return false;
     }
 
     public static function humanFileSize($size,$unit="") :string{

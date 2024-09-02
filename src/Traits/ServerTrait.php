@@ -47,18 +47,10 @@ trait ServerTrait{
     }
     private function initWebServer():void{
         $this->logger('init web server');
-        $logHandler = new StreamHandler(ByteStream\getStdout());
-        $logHandler->pushProcessor(new PsrLogMessageProcessor());
-        $logHandler->setFormatter(new ConsoleFormatter());
-        $logger = new Logger('server');
-        $logger->pushHandler($logHandler);
-        $logger->useLoggingLoopDetection(false);
-
-
         $this->server = new SocketHttpServer(
-            $logger,
+            $this->getPsrLogger(),
             new Socket\ResourceServerSocketFactory(),
-            new SocketClientFactory($logger),
+            new SocketClientFactory($this->getPsrLogger()),
         );
         $expose_port = $_ENV['DL_EXPOSE_PORT'] ?? 8000;
         $this->server->expose("0.0.0.0:$expose_port");

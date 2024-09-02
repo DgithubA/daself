@@ -74,10 +74,10 @@ trait HelperTrait{
             $message = __('error_reporting_message',['function'=>$function,'line'=>$e->getLine(),'message'=>$e->getMessage(),'file'=>$e->getFile()]);
             //$message = (string)$e;
             if ($error_report_setting['sendtrace']) {
-                $message .= PHP_EOL . "Trace:" . PHP_EOL;
-                $is_bot_source = str_contains('\APP\\',$e->getFile());
+                $message .= PHP_EOL . "<b>Trace:</b>" . PHP_EOL;
+                $is_bot_source = str_contains($e->getFile(),'\APP\\');
                 if ($is_bot_source) {
-                    $message .= Helper::myTrace($e->getTrace());
+                    $message .= Helper::myTrace($e->getTrace(),'\APP\\');
                 } else {
                     if (method_exists($e, 'getTLTrace')) {
                         $message .= $e->getTLTrace();
@@ -141,26 +141,9 @@ trait HelperTrait{
         }
     }
 
-    private function globalOutCommand(Message $message) : string{
-        $message_text = $message->message;
-        switch ($message_text) {
-            case '/start':
-                $fe = __('start_message', ['counter' => Helper::formatSeconds((time() - $this->start_time))]);
-                break;
-            case '/usage':
-                $fe = __('memory_usage', ['usage' => round(memory_get_usage() / 1024 / 1024, 2), 'real_usage' => round(memory_get_usage(true) / 1024 / 1024, 2),
-                    'peak_usage' => round(memory_get_peak_usage() / 1024 / 1024, 2), 'real_peak_usage' => round(memory_get_peak_usage(true) / 1024 / 1024, 2)]);
-                break;
-            case '/getmessage':
-                if(($reply = $message->getReply())!==null) $fe = __('json', ['json' => json_encode($reply, 448)]);
-                break;
-            default:
-                $fe = __('bad_command');
-        }
-        return $fe;
-    }
-    private function extractMime(bool $secret, Message|Media|LocalFile|RemoteUrl|BotApiFileId|ReadableStream $file, ?string $fileName, ?callable $callback, ?Cancellation $cancellation): string{
+    private function extractMime(bool $secret, Message|Media|LocalFile|RemoteUrl|BotApiFileId|ReadableStream $file, ?string $fileName, ?callable $callback): string{
         $size = 0;
+        $cancellation = $this->cancellation->getCancellation();
         $file = $this->getStream($file, $cancellation, $size);
         $p = new Pipe(1024*1024);
         $fileFuture = async(fn () => $this->uploadFromStream(
@@ -187,7 +170,7 @@ trait HelperTrait{
 
     private function myUpload(int|string $peer,string $url,int $replyToMsgId = null,string $file_name = null,callable $cb = null): void{
         $remote_file = new RemoteUrl($url);
-        $mime_type = $this->extractMime(false,$remote_file,null,null,null);
+        $mime_type = $this->extractMime(false,$remote_file,$file_name,$cb,null);
         switch (strtolower($mime_type)){
             case 'video/mpeg':
             case 'video/mp4':
@@ -211,22 +194,23 @@ trait HelperTrait{
                 $type = Document::class;
                 break;
         }
+
         //$this->wrapper->getAPI()->sendMedia($type,$peer,callback: $cb, fileName: $file_name, replyToMsgId: $replyToMsgId);
         switch ($type){
             case Document::class:
-                $this->sendDocument($peer,$remote_file, callback: $cb, fileName: $file_name, replyToMsgId: $replyToMsgId);
+                $this->sendDocument($peer,$remote_file, callback: $cb, fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation: $this->cancellation->getCancellation());
                 break;
             case Video::class:
-                $this->sendVideo($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId);
+                $this->sendVideo($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation: $this->cancellation->getCancellation());
                 break;
             case Photo::class:
-                $this->sendPhoto($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId);
+                $this->sendPhoto($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation: $this->cancellation->getCancellation());
                 break;
             case Audio::class:
-                $this->sendAudio($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId);
+                $this->sendAudio($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation: $this->cancellation->getCancellation());
                 break;
             case Gif::class:
-                $this->sendGif($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId);
+                $this->sendGif($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation: $this->cancellation->getCancellation());
                 break;
         }
 

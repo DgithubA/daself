@@ -48,11 +48,13 @@ return [
     'file_is_too_small'=> 'file is too small. file size: <b>:size</b> | minimum <b>:minimumSize</b>',
     'replayed_no_media' => 'The replayed message has no media.',
     'download_script_url_wrong'=> 'please set DOWNLOAD_SCRIPT_URL to use download link feature.',
-    'url_not_found'=>'url not found. use upload:{URL} [FILENAME] or reply to messages contain url of file',
+    'url_not_found'=>'url not found. use /upload {URL} [FILENAME] or reply to messages contain url of file',
     'uploading'=>'uploading...',
     'upload_percent'=>'uploading <b>%:percent</b>',
-    'upload_successfully'=> "upload successfully.\nTotal upload time: <b>:time</b>\nTotal upload speed: <b>:speed</b> mbps",
+    'upload_successfully'=> "upload successfully.👇👇\nTotal upload time: <b>:time</b>\nTotal upload speed: <b>:speed</b> mbps",
     'results'=>"<b>Results :</b>\n :data",
     'without_database_connection'=>'without database connection.',
     'error_reporting_message'=> "<b>#error as :function:</b>\n<b>in line:</b> :line\n<b>Message:</b>:message\n<b>on File:</b> :file",
+    'downloading'=>'downloading...',
+    'canceled'=>'canceled.!'
 ];

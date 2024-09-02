@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace APP;
 use APP\Constants\Constants;
 use APP\Database\DatabaseService;
+use APP\Traits\CommandTrait;
 use APP\Traits\HandlerTrait;
 use APP\Traits\HelperTrait;
 use APP\Traits\ServerTrait;
@@ -15,11 +16,12 @@ use Revolt\EventLoop;
 
 class botHandler extends SimpleEventHandler implements \Amp\Http\Server\RequestHandler{
 
-    use HandlerTrait , HelperTrait , ServerTrait;
+    use HandlerTrait , HelperTrait ,CommandTrait, ServerTrait;
     public int $save_id;
     public int $start_time;
     public array $settings = [];
     private ?DatabaseService $databaseService;
+    private \Amp\DeferredCancellation $cancellation;
     public function getReportPeers(): array{
         return [Constants::ADMIN];
     }
@@ -37,6 +39,7 @@ class botHandler extends SimpleEventHandler implements \Amp\Http\Server\RequestH
     public function onStart(): void{
         global $localization;
         $this->logger("The bot was started!");
+        $this->cancellation = new \Amp\DeferredCancellation();
 
         $db_setting = $this->getSettings()->getDb();
         if(!$db_setting instanceof Memory) $this->databaseService = new DatabaseService($db_setting);
