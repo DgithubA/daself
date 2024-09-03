@@ -10,13 +10,8 @@ use Amp\Http\Server\Driver\SocketClientFactory;
 use Amp\Http\Server\SocketHttpServer;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\Response;
-use Amp\Log\ConsoleFormatter;
-use Amp\Log\StreamHandler;
 use Amp\Socket;
-use Amp\ByteStream;
 use danog\MadelineProto\Lang;
-use Monolog\Processor\PsrLogMessageProcessor;
-use Monolog\Logger;
 use Revolt\EventLoop;
 
 

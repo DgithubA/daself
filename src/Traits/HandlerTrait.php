@@ -31,7 +31,6 @@ use danog\MadelineProto\EventHandler\Update;
 use danog\MadelineProto\LocalFile;
 use danog\MadelineProto\VoIP;
 use danog\MadelineProto\EventHandler\Message;
-use Throwable;
 
 trait HandlerTrait{
 
@@ -177,7 +176,7 @@ trait HandlerTrait{
 
     #[FilterSavedMessage]
     public function savedMessage(Incoming&Message\PrivateMessage $message): void{
-        $this->logger('new message in savedMessage id:'.$message->id);
+        //$this->logger('new message in savedMessage id:'.$message->id);
         $this->commands($message);
     }
     #[FilterNot(new FilterSavedMessage())]
@@ -252,10 +251,16 @@ trait HandlerTrait{
             if (in_array($message_text, Constants::GLOBAL_COMMAND)) {
                 $fe = $this->globalOutCommand($message);
             } elseif ($message_text === 'set as save') {
-                $this->settings['save_id'] = $message->chatId;
-                $this->save_id = $message->chatId;
-                $fe = __('set_as_save_successfully');
-                $report = __('set_as_save', ['mention' => $this->mention($message->chatId)]);
+                if($this->settings['save_id'] !== $message->chatId){
+                    $this->settings['save_id'] = $message->chatId;
+                    $this->save_id = $message->chatId;
+                    $fe = __('set_as_save_successfully');
+                    $report = __('set_as_save', ['mention' => $this->mention($message->chatId)]);
+                }else{
+                    $this->save_id = $this->getSelf()['id'] ?? $this->getReportPeers()[0];
+                    $fe = __('unset_as_save_successfully');
+                    $report = __('unset_as_save', ['mention' => $this->mention($message->chatId)]);
+                }
             }
 
             if (!empty($fe)) $message->replyOrEdit($fe, parseMode: Constants::DefaultParseMode);

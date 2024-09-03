@@ -32,6 +32,8 @@ return [
     ],
     'set_as_save_successfully'=>'set successfully!',
     'set_as_save'=> 'chat :mention set as save.',
+    'unset_as_save_successfully'=>'unset successfully!',
+    'inset_as_save'=> 'chat :mention unset as save. default save chat (savedMessage) was set.',
     'commands' => [
         'add_successfully'=>'add successfully',
         'bad_input_use_like' => 'incorrect command input. use like : <code>:like</code>',

@@ -11,8 +11,6 @@ use APP\Traits\ServerTrait;
 use danog\MadelineProto\EventHandler\Plugin\RestartPlugin;
 use danog\MadelineProto\Settings\Database\Memory;
 use danog\MadelineProto\SimpleEventHandler;
-use Revolt\EventLoop;
-
 
 class botHandler extends SimpleEventHandler implements \Amp\Http\Server\RequestHandler{
 
