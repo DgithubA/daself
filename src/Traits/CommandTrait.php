@@ -5,6 +5,7 @@ use APP\Constants\Constants;
 use APP\Helpers\Helper;
 use danog\MadelineProto\EventHandler\Filter\FilterNotEdited;
 use danog\MadelineProto\EventHandler\Media;
+use danog\MadelineProto\EventHandler\Message\Entities\Pre;
 use danog\MadelineProto\LocalFile;
 use danog\MadelineProto\RPCErrorException;
 use danog\MadelineProto\EventHandler\Message;
@@ -16,12 +17,12 @@ Trait CommandTrait{
             $message_text = trim($message->message);
             $lower_case_message = mb_strtolower($message_text);
             if (in_array($lower_case_message, ['/start', '/usage', '/restart', '/help', '/shutdown', '/getsettings','/getmessage','/cancel','/test'])) {
-               $this->addsCommand($message);
+                $this->addsCommand($message);
             }
             elseif (preg_match("/^\/last\s+((?:-[\w!]+\s*)+)?(\d+)?\s*(reset)?$/", $message_text)) {
                 $this->lastCommand($message);
             }
-            elseif (preg_match("/^\/(php|cli|run)\s?(.+)$/su", $message_text)) {
+            elseif (str_starts_with($lower_case_message,'/php') or str_starts_with($lower_case_message,'/run') or str_starts_with($lower_case_message,'/code') or str_starts_with($lower_case_message,'/cli')) {
                 $this->codeRunner($message);
             }
             elseif (preg_match("/^\/query\s?(.+)$/su", $message_text)) {
@@ -134,42 +135,62 @@ Trait CommandTrait{
 
     public function codeRunner(Message $message):void{
         $message_text = $message->message;
+        $lower_case_message = strtolower($message_text);
         $chat = $message->chatId;
-        if (preg_match("/^\/(php|cli|run)\s?(.+)$/su", $message_text, $match)) {
-            $message_to_edit = $message->reply(__('running'));
-            $this->logger("start runner:");
-            $code = $match[2];
-            $torun = "return (function () use 
+        if (str_starts_with($lower_case_message,'/php') or str_starts_with($lower_case_message,'/code') or str_starts_with($lower_case_message,'/cli')) {
+            if(preg_match("/^\/(php|code|cli|run)\s?(.+)$/sui", $message_text, $match)){
+                $entities = $message->entities;
+                $code = $match[2];
+                $message_to_edit = $message->reply(__('running'));
+            }elseif (in_array($lower_case_message , ['/run','/php','/cli','/code']) and $message->getReply() !== null){
+                $message_to_edit = $message->replyOrEdit(__('running'));
+                $reply = $message->getReply();
+                $entities = $reply->entities ?? null;
+            }
+            if(!empty($entities)) {
+                foreach ($entities as $entity) {
+                    if ($entity instanceof Pre && $entity->language === 'php') {
+                        $code = substr($reply->message ?? $message_text, $entity->offset, $entity->length);
+                        $this->logger($code);
+                        break;
+                    }
+                }
+            }
+            if(!empty($code)) {
+                $this->logger("start runner: ".$code);
+                $torun = "return (function () use 
                                 (&\$message ,&\$chat ,&\$reply_to_message_id){
                                 {$code}
                                 }
                            )();";
-            $result = "";
-            $error = "";
-            ob_start();
-            try {
-                (eval($torun));
-                $result .= ob_get_contents() . "\n";
-            } catch (\Throwable $e) {
-                $error .= $e->getMessage() . "\n";
-                $error .= $e->getTraceAsString() . "\n";
-            }
-            ob_end_clean();
-            $result = trim($result);
-            $error = trim($error);
-            $text = !empty($result) ? $result : "empty result.";
-            $text .= !empty($error) ? "\n---------------\n" . "Errors :\n" . $error : "";
-            try {
-                $text = __('results', ['data' => trim($text)]);
-                $message_to_edit->editText($text, parseMode: Constants::DefaultParseMode);
-            } catch (\Throwable $e) {
-                $message_to_edit->editText("#error for edit result:\n<code>" . $e->getMessage() . "</code>\nResult file:👇🏻", parseMode: Constants::DefaultParseMode);
-                $file_path = './data/run-result.txt';
-                \Amp\File\write($file_path, $text);
-                $this->sendDocument($chat, (new LocalFile($file_path)), caption: '<code>' . $match[2] . '</code>', parseMode: Constants::DefaultParseMode, fileName: 'run-result.txt', mimeType: 'text/plain', replyToMsgId: $message_to_edit->id);
-                \Amp\File\deleteFile($file_path);
-            }
-            $this->logger("end runner");
+                $result = "";
+                $error = "";
+                ob_start();
+                try {
+                    (eval($torun));
+                    $result .= ob_get_contents() . "\n";
+                } catch (\Throwable $e) {
+                    $error .= $e->getMessage() . "\n";
+                    $error .= $e->getTraceAsString() . "\n";
+                }
+                ob_end_clean();
+                $result = trim($result);
+                $error = trim($error);
+                $text = !empty($result) ? __('code',['code'=>$result]) : "empty result.";
+                $text .= !empty($error) ? __('bold',['bold'=>"\n---------------\nErrors :\n"]) . $error : "";
+                try {
+                    $text = __('results', ['data' => trim($text)]);
+                    $message_to_edit->editText($text, parseMode: Constants::DefaultParseMode);
+                } catch (\Throwable $e) {
+                    $message_to_edit->editText("#error for edit result:\n<code>" . $e->getMessage() . "</code>\nResult file:👇🏻", parseMode: Constants::DefaultParseMode);
+                    $file_path = './data/run-result.txt';
+                    \Amp\File\write($file_path, $text);
+                    $this->sendDocument($chat, (new LocalFile($file_path)), caption: '<code>' . $match[2] . '</code>', parseMode: Constants::DefaultParseMode, fileName: 'run-result.txt', mimeType: 'text/plain', replyToMsgId: $message_to_edit->id);
+                    \Amp\File\deleteFile($file_path);
+                }
+                $this->logger("end runner");
+            }else $fe = __('code_not_found');
+            $this->answer($chat,$fs ?? null,$fe ?? null,$message_to_edit ?? $message,$reply2id ?? null);
         }
     }
 
@@ -231,7 +252,7 @@ Trait CommandTrait{
                     case 'ls':
                     case 'list':
                     case 'status':
-                    $status_string = ($this->settings[$command]['status'] ?? false) === true ? __('status.on') : __('status.off');
+                        $status_string = ($this->settings[$command]['status'] ?? false) === true ? __('status.on') : __('status.off');
                         $fs = $status_string . "\n";
                         if (!empty($this->settings[$command]['indexes'])) {
                             foreach ($this->settings[$command]['indexes'] as $key => $index) {
@@ -412,7 +433,11 @@ Trait CommandTrait{
         $reply2id = $reply2id instanceof Message ? $reply2id->id : $reply2id;
         $this->logger("new answer fs: ".(!empty($fs) ? "`$fs`" : 'null')."  fe: " . (!empty($fe) ? "`$fe`" : 'null'));
         if (!empty($fs)) $this->sendMessage($peer, $fs, parseMode: Constants::DefaultParseMode, replyToMsgId: $reply2id);
-        if (!empty($fe)) $message_to_edit->replyOrEdit($fe, parseMode: Constants::DefaultParseMode);
+        if (!empty($fe)){
+            if($message_to_edit->out) {
+                $message_to_edit->editText($fe, parseMode: Constants::DefaultParseMode);
+            }else $message_to_edit->reply($fe, parseMode: Constants::DefaultParseMode);
+        }
     }
     private function globalOutCommand(Message $message) : string{
         $message_text = $message->message;

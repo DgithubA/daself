@@ -4,6 +4,7 @@
 return [
     'json'=>'<pre language="json"><code>:json</code></pre>',
     'code'=>'<code>:code</code>',
+    'bold'=>'<b>:bold</b>',
     'start_message'=>"the bot uptime is:\n:counter",
     'mention'=>'<a href=":url">:name</a>',
     'memory_usage'=>"Memory now Usage : :usage <b>/</b>:real_usage <b>MB</b>\nMemory peak Usage :  :peak_usage <b>/</b>:real_peak_usage  <b>MB</b>",
@@ -60,5 +61,6 @@ return [
     'downloading'=>'downloading...',
     'canceled'=>'canceled.!',
     'channel_is_private'=>'channel is private. join with join link.',
-    'getmessagelink_bad_command'=> "bad command. reply to message contain url or /getmessagelink [link]\nurl sample: https://t.me/telegram/2|https://t.me/example/5-10"
+    'getmessagelink_bad_command'=> "bad command. reply to message contain url or /getmessagelink [link]\nurl sample: https://t.me/telegram/2|https://t.me/example/5-10",
+    'code_not_found'=>"code not found.\n use /php [CODE] or reply to messages contain php code pre",
 ];
