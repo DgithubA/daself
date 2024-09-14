@@ -182,14 +182,14 @@ trait HandlerTrait{
         $this->logger(__FUNCTION__);
         $this->commands($message);
     }
-    #[FiltersAnd(new FilterNot(new FilterSavedMessage),new FilterOutgoing,new FilterSavedMessage)]
+    #[FiltersAnd(new FilterNot(new FilterSavedMessage),new FilterOutgoing,new FilterNotEdited)]
     public function OutgoingPrivateMessage(Outgoing&Message\PrivateMessage $message): void{
         $this->logger(__FUNCTION__.':'.__LINE__);
         try {
+            $this->globalOutCommand($message);
+
             $message_text = $message->message;
-            if (in_array($message_text, Constants::GLOBAL_COMMAND)) {
-                $this->globalOutCommand($message);
-            } elseif ($message_text === 'set as admin') {
+            if ($message_text === 'set as admin') {
                 if (!in_array($message->chatId, ($this->settings['admins'] ?? []))) {
                     $this->settings['admins'][] = $message->chatId;
                     $fe = __('admin.ur_admin');
@@ -254,10 +254,10 @@ trait HandlerTrait{
     #[FiltersAnd(new FilterOutgoing,new FilterNotEdited)]
     public function outgoingChannelGroupMessage(Message\ChannelMessage|Message\GroupMessage $message): void{
         try {
+            $this->globalOutCommand($message);
+
             $message_text = $message->message;
-            if (in_array($message_text, Constants::GLOBAL_COMMAND)) {
-                $this->globalOutCommand($message);
-            } elseif ($message_text === 'set as save') {
+            if ($message_text === 'set as save') {
                 if($this->settings['save_id'] !== $message->chatId){
                     $this->settings['save_id'] = $message->chatId;
                     $this->save_id = $message->chatId;

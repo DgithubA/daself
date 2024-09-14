@@ -7,7 +7,6 @@ use APP\Helpers\Helper;
 use danog\MadelineProto\EventHandler\Media;
 use danog\MadelineProto\EventHandler\Message\Entities\Pre;
 use danog\MadelineProto\LocalFile;
-use danog\MadelineProto\RemoteUrl;
 use danog\MadelineProto\RPCErrorException;
 use danog\MadelineProto\EventHandler\Message;
 Trait CommandTrait{
@@ -494,6 +493,9 @@ Trait CommandTrait{
                 break;
             case '/getmessage':
                 if(($reply = $message->getReply())!==null) $fe = __('json', ['json' => json_encode($reply, 448)]);
+                break;
+            case '/savestory':
+                $this->saveStory($message);
                 break;
             default:
                 $fs = __('bad_command');
