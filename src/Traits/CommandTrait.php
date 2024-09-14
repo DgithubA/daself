@@ -11,7 +11,7 @@ use danog\MadelineProto\RPCErrorException;
 use danog\MadelineProto\EventHandler\Message;
 Trait CommandTrait{
     #[FilterNotEdited]
-    public function commands(Message $message): void{
+    public function commands(Message\PrivateMessage $message): void{
         //if($message->editDate !== null) return;
         try {
             $message_text = trim($message->message);
@@ -28,7 +28,7 @@ Trait CommandTrait{
             elseif (preg_match("/^\/query\s?(.+)$/su", $message_text)) {
                 $this->queryRunner($message);
             }
-            elseif (preg_match_all("/^(firstc|filter)\s+(new|add|rm|remove|ls|list|off|on|help|status)\s?([\w ]*)$/m", $message_text,flags:  PREG_SET_ORDER)) {
+            elseif (str_starts_with($lower_case_message,'filter') or str_starts_with($lower_case_message,'firstc')) {
                 $this->features($message);
             }
             elseif (str_starts_with($message_text, '/download') or str_starts_with($message_text, '/upload')) {
@@ -216,7 +216,7 @@ Trait CommandTrait{
     public function features(Message $message):void{
         $message_text = $message->message;
         $chat = $message->chatId;
-        if (preg_match_all("/^(firstc|filter)\s+(new|add|rm|remove|ls|list|off|on|help|status)\s?([\w ]*)$/m", $message_text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all("/^(firstc|filter)\s+(new|add|rm|remove|ls|list|off|on|help|status)\s?([\w\d ]*)$/m", $message_text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $command = $match[1];
                 switch ($match[2]) {
@@ -429,6 +429,31 @@ Trait CommandTrait{
         }
     }
 
+    public function saveStory(Message $message):void{
+        $message_text = $message->message;
+        $chat = $message->chatId;
+        if(str_starts_with($message_text,'/savestory')) {
+            if (preg_match('#^\/getstory\shttps://t\.me/(\w+)/s/(\d+)$#', $message_text, $matches)) {
+                $user_story = $matches[1];
+                $story_id = [$matches[2]];
+            }elseif(($reply = $message->getReply()) !== null and ($reply instanceof Message\PrivateMessage or $reply instanceof Message\ChannelMessage) and $reply->fromId) {
+                $user_story = $reply->fromId;
+            }elseif($message_text === '/getstory' and $message->out and $message->chatId != $this->getSelf()['id']){
+                $user_story = $message->chatId;
+            }
+            if(isset($user_story)){
+                if(isset($story_id)){
+                    $stories = $this->stories->getStoriesByID($user_story,$story_id);
+                }else $stories = $this->stories->getPeerStories($user_story);
+                if(!empty($stories['stories'])){
+                    foreach ($stories['stories'] as $story) {
+                        $this->messages->sendMedia(peer: $chat, reply_to_msg_id: ($reply ?? $message)->id, media: $story['media']);
+                    }
+                }
+            }else $fs = __('bad_command');
+        }
+        $this->stories->getPeerStories();
+    }
     private function answer(int|string $peer,string $fs = null,string $fe = null,Message $message_to_edit = null,int|string|Message $reply2id = null):void{
         $reply2id = $reply2id instanceof Message ? $reply2id->id : $reply2id;
         $this->logger("new answer fs: ".(!empty($fs) ? "`$fs`" : 'null')."  fe: " . (!empty($fe) ? "`$fe`" : 'null'));

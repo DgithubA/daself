@@ -14,11 +14,13 @@ use danog\MadelineProto\EventHandler\CallbackQuery;
 use danog\MadelineProto\EventHandler\Channel\ChannelParticipant;
 use danog\MadelineProto\EventHandler\Delete;
 use danog\MadelineProto\EventHandler\Filter\Combinator\FilterNot;
+use danog\MadelineProto\EventHandler\Filter\Combinator\FiltersAnd;
 use danog\MadelineProto\EventHandler\Filter\FilterChannel;
 use danog\MadelineProto\EventHandler\Filter\FilterCommentReply;
 use danog\MadelineProto\EventHandler\Filter\FilterGroup;
 use danog\MadelineProto\EventHandler\Filter\FilterIncoming;
 use danog\MadelineProto\EventHandler\Filter\FilterMedia;
+use danog\MadelineProto\EventHandler\Filter\FilterNotEdited;
 use danog\MadelineProto\EventHandler\Filter\FilterOutgoing;
 use danog\MadelineProto\EventHandler\Filter\FilterPrivate;
 use danog\MadelineProto\EventHandler\Filter\FilterService;
@@ -29,6 +31,7 @@ use danog\MadelineProto\EventHandler\SimpleFilter\Incoming;
 use danog\MadelineProto\EventHandler\Typing;
 use danog\MadelineProto\EventHandler\Update;
 use danog\MadelineProto\LocalFile;
+use danog\MadelineProto\RPCErrorException;
 use danog\MadelineProto\VoIP;
 use danog\MadelineProto\EventHandler\Message;
 
@@ -53,10 +56,11 @@ trait HandlerTrait{
         }
     }
 
-    #[FilterChannel]
-    public function channelMessage(Message\ChannelMessage $message): void{
+    #[FiltersAnd(new FilterChannel(),new FilterNotEdited())]
+    public function channelMessage(Incoming&Message\ChannelMessage $message): void{
         try {
-            if (($this->settings['firstc']['status'] ?? false) === true and empty($this->settings['firstc']['indexes'])) return;
+            if (!($this->settings['firstc']['status'] ?? false) or empty($this->settings['firstc']['indexes'])) return;
+            $this->logger($message);
             $discussion = $message->getDiscussion();
             if (is_null($discussion)) return;
             //todo:require to check join requirement to send comment.
@@ -73,8 +77,13 @@ trait HandlerTrait{
                     $text = $ar[rand(0, count($ar) - 1)];
                 }
                 $text = str_replace(['TIME', 'DATE', 'TITLE', 'X'], [date('H:i', time()), date('y/m/d', time()), $discussion_title, "$x"], $text);
-
-                $message->getDiscussion()->reply($text);
+                try {
+                    $message->getDiscussion()->reply($text);
+                }catch (RPCErrorException $e){
+                    if($e->rpc === 'CHAT_GUEST_SEND_FORBIDDEN') {
+                        $this->sendMessage($this->save_id,__('comment_required_join_chat',['channel_mention'=>$mention_channel]),parseMode: Constants::DefaultParseMode);
+                    }else throw $e;
+                }
                 $x++;
                 $report .= __('comment_posted', ['x' => $x, 'channel_mention' => $mention_channel, 'text' => $text]);
             }
@@ -232,7 +241,9 @@ trait HandlerTrait{
                 if(($this->settings['filter']['status'] ?? false)){
                     foreach ($this->settings['filter']['indexes'] as $index){
                         if(!($index['status'] ?? false)) continue;
-                        if(str_contains($index['text'],$message->message)) {
+                        if(str_contains($message->message,$index['text'])) {
+                            $forwarded = $message->forward($this->save_id);
+                            $this->sendMessage($this->save_id,__('report_message_from',['from'=>$this->mention($message->chatId)]), parseMode: Constants::DefaultParseMode, replyToMsgId: $forwarded[0]->id);
                             $message->delete();
                             break;
                         }

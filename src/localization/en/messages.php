@@ -16,7 +16,7 @@ return [
     'running'=>'running...',
     'ok_set'=>'ok set!',
     'flag_not_exist'=>'flag <b>:flag</b> not exist!',
-    'comment_posted'=>'<b>comment :x successfully posted in</b> :mention_channel \n <b>text:</b>":text" \n_-_-_-_-_-_-_-_-_-_\n',
+    'comment_posted'=>"<b>comment :x successfully posted in</b> :channel_mention \n <b>text:</b>\":text\" \n_-_-_-_-_-_-_-_-_-_\n",
     'ttl_caption'=>'self-Destructing :type from :user_mention',
     'admin' => [
         'ur_admin'=> 'You are an admin. Try: /start',
@@ -62,5 +62,8 @@ return [
     'canceled'=>'canceled.!',
     'channel_is_private'=>'channel is private. join with join link.',
     'getmessagelink_bad_command'=> "bad command. reply to message contain url or /getmessagelink [link]\nurl sample: https://t.me/telegram/2|https://t.me/example/5-10",
+    'getlinkmessage_in_progress'=>'get Link Message...',
     'code_not_found'=>"code not found.\n use /php [CODE] or reply to messages contain php code pre",
+    'report_message_from'=>'filter message from :from at :date :time',
+    'comment_required_join_chat'=>'i\'ll try to send comment at :channel_mention, but I failed because of required membership. '
 ];
