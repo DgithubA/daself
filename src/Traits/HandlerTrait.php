@@ -41,17 +41,9 @@ trait HandlerTrait{
     #[FilterIncomingTtlMedia]
     public function IncomingTtlMedia(Message\PrivateMessage $message): void{
         try {
-            $path = $message->media->downloadToDir(Constants::DataFolderPath);
-            $local_file = (new LocalFile($path));
-
             $user_mention = $this->mention($message->chatId);
             $caption = __('ttl_caption', ['type' => ($message->media instanceof Photo) ? 'photo' : 'video', 'user_mention' => $user_mention]);
-
-            if ($message->media instanceof Photo) {
-                $this->sendPhoto($this->save_id, $local_file, $caption, Constants::DefaultParseMode);
-            } elseif ($message->media instanceof Video) {
-                $this->sendVideo($this->save_id, $local_file, caption: $caption, parseMode: Constants::DefaultParseMode, mimeType: $message->media->mimeType);
-            }
+            $this->reUploadMedia($this->save_id,$message->media,caption: $caption);
         } catch (\Throwable $e) {
             $this->errorReport(__FUNCTION__, $e, $message);
         }
@@ -82,7 +74,7 @@ trait HandlerTrait{
                     $message->getDiscussion()->reply($text);
                 }catch (RPCErrorException $e){
                     if($e->rpc === 'CHAT_GUEST_SEND_FORBIDDEN') {
-                        $this->sendMessage($this->save_id,__('comment_required_join_chat',['channel_mention'=>$mention_channel]),parseMode: Constants::DefaultParseMode);
+                        $this->myReport(__('comment_required_join_chat',['channel_mention'=>$mention_channel]));
                     }else throw $e;
                 }
                 $x++;
@@ -239,7 +231,7 @@ trait HandlerTrait{
                 $this->commands($message);
             } elseif (in_array($message->chatId, ($this->settings['block_list'] ?? []))) {
                 $forward = $message->forward($this->save_id)[0];
-                $this->sendMessage($this->save_id, __('block.message_from_blocked_user', ['mention' => $this->mention($message->chatId)]), replyToMsgId: $forward->id);
+                $this->myReport(__('block.message_from_blocked_user', ['mention' => $this->mention($message->chatId)]), replyToMsgId: $forward->id);
                 $message->delete();
             }else{
                 if(($this->settings['filter']['status'] ?? false)){
@@ -247,7 +239,7 @@ trait HandlerTrait{
                         if(!($index['status'] ?? false)) continue;
                         if(str_contains($message->message,$index['text'])) {
                             $forwarded = $message->forward($this->save_id);
-                            $this->sendMessage($this->save_id,__('report_message_from',['from'=>$this->mention($message->chatId)]), parseMode: Constants::DefaultParseMode, replyToMsgId: $forwarded[0]->id);
+                            $this->myReport(__('report_message_from',['from'=>$this->mention($message->chatId)]), replyToMsgId: $forwarded[0]->id);
                             $message->delete();
                             break;
                         }

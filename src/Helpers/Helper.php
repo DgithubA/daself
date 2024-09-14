@@ -3,20 +3,14 @@
 namespace APP\Helpers;
 
 
-use Amp\ByteStream\Pipe;
-use Amp\ByteStream\ReadableStream;
-use Amp\Cancellation;
-use Amp\Http\Client\HttpClientBuilder;
-use Amp\Http\Client\Request;
 use Amp\Mysql\MysqlResult;
 use Amp\Postgres\PostgresResult;
-use danog\MadelineProto\BotApiFileId;
 use danog\MadelineProto\EventHandler\Media;
-use danog\MadelineProto\EventHandler\Message;
-use danog\MadelineProto\LocalFile;
-use danog\MadelineProto\RemoteUrl;
-use danog\MadelineProto\StreamDuplicator;
-use function Amp\async;
+use danog\MadelineProto\EventHandler\Media\Audio;
+use danog\MadelineProto\EventHandler\Media\Document;
+use danog\MadelineProto\EventHandler\Media\Gif;
+use danog\MadelineProto\EventHandler\Media\Photo;
+use danog\MadelineProto\EventHandler\Media\Video;
 
 class Helper{
 
@@ -96,5 +90,32 @@ class Helper{
             return __('json',['json'=>$text]);
         }
         return __('code',['code'=>$text]);
+    }
+
+    public static function mime2type(string $mime_type):string{
+        switch (strtolower($mime_type)){
+            case 'video/mpeg':
+            case 'video/mp4':
+            case 'video/mpv':
+                $type = Video::class;
+                break;
+            case 'image/jpeg':
+            case 'image/png':
+                $type = Photo::class;
+                break;
+            case 'image/gif':
+                $type = Gif::class;
+                break;
+            case 'audio/flac':
+            case 'audio/ogg':
+            case 'audio/mpeg':
+            case 'audio/mp4':
+                $type = Audio::class;
+                break;
+            default:
+                $type = Document::class;
+                break;
+        }
+        return $type;
     }
 }

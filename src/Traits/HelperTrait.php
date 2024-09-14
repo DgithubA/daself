@@ -2,11 +2,9 @@
 
 namespace APP\Traits;
 
-use Amp\ByteStream\Pipe;
-use Amp\ByteStream\ReadableStream;
+use Amp\Http\Client\Request;
 use APP\Constants\Constants;
 use APP\Helpers\Helper;
-use danog\MadelineProto\BotApiFileId;
 use danog\MadelineProto\EventHandler\Media;
 use danog\MadelineProto\EventHandler\Media\Audio;
 use danog\MadelineProto\EventHandler\Media\Document;
@@ -15,16 +13,14 @@ use danog\MadelineProto\EventHandler\Media\Photo;
 use danog\MadelineProto\EventHandler\Media\Video;
 use danog\MadelineProto\EventHandler\Message;
 use danog\MadelineProto\EventHandler\Update;
+use danog\MadelineProto\Exception;
 use danog\MadelineProto\LocalFile;
 use danog\MadelineProto\RemoteUrl;
-use danog\MadelineProto\StreamDuplicator;
-use finfo;
+use danog\MadelineProto\TL\Conversion\Extension;
 use Throwable;
-use function Amp\async;
-
 trait HelperTrait{
-    private function myReport(string $message) : Message{
-        return $this->sendMessage($this->save_id,$message,parseMode: Constants::DefaultParseMode);
+    private function myReport(string $message , ?int $replyToMsgId = null) : Message{
+        return $this->sendMessage($this->save_id,$message,parseMode: Constants::DefaultParseMode,replyToMsgId: $replyToMsgId);
     }
 
     private function mention(int $peerId, int|string $messageId = null, string $bname = null): string{
@@ -138,78 +134,59 @@ trait HelperTrait{
         }
     }
 
-    private function extractMime(bool $secret, Message|Media|LocalFile|RemoteUrl|BotApiFileId|ReadableStream $file, ?string $fileName, ?callable $callback): string{
-        $size = 0;
-        $cancellation = $this->cancellation->getCancellation();
-        $file = $this->getStream($file, $cancellation, $size);
-        $p = new Pipe(1024*1024);
-        $fileFuture = async(fn () => $this->uploadFromStream(
-            new StreamDuplicator($file, $p->getSink()),
-            $size,
-            'application/octet-stream',
-            $fileName ?? '',
-            $callback,
-            $secret,
-            $cancellation
-        ));
-
-        $buff = '';
-        while (\strlen($buff) < 1024*1024 && null !== $chunk = $p->getSource()->read($cancellation)) {
-            $buff .= $chunk;
-        }
-        $p->getSink()->close();
-        $p->getSource()->close();
-        unset($p);
-
-        $file = $fileFuture->await();
-        return (new finfo())->buffer($buff, FILEINFO_MIME_TYPE);
+    private function reUploadMedia(int|string $peer,array|Media $media, int $replyToMsgId = null,?string $caption = '',?callable $cb = null): void{
+        $path = $this->downloadToDir($media,Constants::DataFolderPath);
+        $file = new LocalFile($path);
+        $this->smartSendMedia($peer,$file,$replyToMsgId,$caption,cb: $cb);
+        \Amp\File\deleteFile($path);
     }
-
-    private function myUpload(int|string $peer,string $url,int $replyToMsgId = null,string $file_name = null,callable $cb = null): void{
-        $remote_file = new RemoteUrl($url);
-        $mime_type = $this->extractMime(false,$remote_file,$file_name,$cb,null);
-        switch (strtolower($mime_type)){
-            case 'video/mpeg':
-            case 'video/mp4':
-            case 'video/mpv':
-                $type = Video::class;
-                break;
-            case 'image/jpeg':
-            case 'image/png':
-                $type = Photo::class;
-                break;
-            case 'image/gif':
-                $type = Gif::class;
-                break;
-            case 'audio/flac':
-            case 'audio/ogg':
-            case 'audio/mpeg':
-            case 'audio/mp4':
-                $type = Audio::class;
-                break;
-            default:
-                $type = Document::class;
-                break;
+    private function extractFileMime(LocalFile|RemoteUrl $file){
+        $cancellation = $this->cancellation->getCancellation();
+        if($file instanceof RemoteUrl){
+            $url = $file->url;
+            $request = new Request($url);
+            $request->setTransferTimeout(INF);
+            $request->setBodySizeLimit(512 * 1024 * 8000);
+            $response = $this->wrapper->getAPI()->datacenter->getHTTPClient()->request($request, $cancellation);
+            if (($status = $response->getStatus()) !== 200) {
+                throw new Exception("Wrong status code: {$status} ".$response->getReason());
+            }
+            $mime = trim(explode(';', $response->getHeader('content-type') ?? 'application/octet-stream')[0]);
+            //$mime = Extension::getMimeFromBuffer($response->getBody());
+        }elseif ($file instanceof LocalFile){
+            $mime = Extension::getMimeFromFile($file->file);
+        }
+        return $mime;
+    }
+    private function smartSendMedia(int|string $peer, string|RemoteUrl|LocalFile $file, int $replyToMsgId = null,?string $caption = '', string $file_name = null, callable $cb = null): void{
+        if(is_string($file)) {
+            if (filter_var($file, FILTER_VALIDATE_URL)) {
+                $file = new RemoteUrl($file);
+            } else $file = new LocalFile($file);
         }
 
-        //$this->wrapper->getAPI()->sendMedia($type,$peer,callback: $cb, fileName: $file_name, replyToMsgId: $replyToMsgId);
+        $mime_type = $this->extractFileMime($file);
+        $type = Helper::mime2type($mime_type);
+        $this->sendMediaByType($type,$peer,$file,$caption,$replyToMsgId,$file_name,$cb);
+    }
+    private function sendMediaByType(string $type,int|string $peer,\danog\MadelineProto\EventHandler\Message|\danog\MadelineProto\EventHandler\Media|\danog\MadelineProto\LocalFile|\danog\MadelineProto\RemoteUrl|\danog\MadelineProto\BotApiFileId|\Amp\ByteStream\ReadableStream $file,?string $caption = '',int $replyToMsgId = null,string $file_name = null,callable $cb = null): void{
+        $cancellation = $this->cancellation->getCancellation();
         switch ($type){
             case Document::class:
-                $this->sendDocument($peer,$remote_file, callback: $cb, fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation: $this->cancellation->getCancellation());
+                $this->sendDocument($peer,$file, caption: $caption, parseMode:Constants::DefaultParseMode,callback: $cb, fileName: $file_name, replyToMsgId: $replyToMsgId, cancellation: $cancellation);
                 break;
             case Video::class:
-                $this->sendVideo($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation: $this->cancellation->getCancellation());
+                $this->sendVideo($peer,$file, caption: $caption,parseMode:Constants::DefaultParseMode,callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation:$cancellation);
                 break;
             case Photo::class:
-                $this->sendPhoto($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation: $this->cancellation->getCancellation());
+                $this->sendPhoto($peer,$file,caption: $caption, parseMode:Constants::DefaultParseMode,callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation:$cancellation);
                 break;
             case Audio::class:
-                $this->sendAudio($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation: $this->cancellation->getCancellation());
+                $this->sendAudio($peer,$file, caption: $caption,parseMode:Constants::DefaultParseMode,callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation:$cancellation);
                 break;
             case Gif::class:
-                $this->sendGif($peer,$remote_file, callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation: $this->cancellation->getCancellation());
+                $this->sendGif($peer,$file, caption: $caption,parseMode:Constants::DefaultParseMode,callback: $cb,fileName: $file_name, replyToMsgId: $replyToMsgId,cancellation:$cancellation);
                 break;
         }
-
     }
 }
