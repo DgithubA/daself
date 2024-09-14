@@ -2,17 +2,17 @@
 
 namespace APP\Traits;
 use APP\Constants\Constants;
+use APP\Filters\FilterSavedMessage;
 use APP\Helpers\Helper;
-use danog\MadelineProto\EventHandler\Filter\FilterNotEdited;
 use danog\MadelineProto\EventHandler\Media;
 use danog\MadelineProto\EventHandler\Message\Entities\Pre;
 use danog\MadelineProto\LocalFile;
 use danog\MadelineProto\RPCErrorException;
 use danog\MadelineProto\EventHandler\Message;
 Trait CommandTrait{
-    #[FilterNotEdited]
+
     public function commands(Message\PrivateMessage $message): void{
-        //if($message->editDate !== null) return;
+        if($message->editDate !== null) return;
         try {
             $message_text = trim($message->message);
             $lower_case_message = mb_strtolower($message_text);
@@ -52,43 +52,47 @@ Trait CommandTrait{
                 case '/start':
                 case '/usage':
                 case '/getmessage':
-                    $fe = $this->globalOutCommand($message);
+                    $answer = $this->globalOutCommand($message);
                     break;
                 case '/restart':
-                    $fs = __('restarting');
-                    $this->sendMessage($chat, $fs);
+                    $this->sendMessage($chat, __('restarting'),replyToMsgId: $reply2id);
                     $this->restart();
                     break;
                 case '/help':
-                    $fe = "<code>/start</code> : get bot status and uptime.\n<code>/restart</code> : restart bot.\n<code>/usage</code> : get Memory Usage.\n<code>/shutdown</code> : shutdown bot.\n<code>/getSettings</code> : json encoded settings.\n<code>/shutdown</code> : shutdown bot.\n";
-                    $fe .= "\n<code>/last [FLAGS] [COUNT] [reset]</code> : get new message json encoded.";
+                    $answer = "<code>/start</code> : get bot status and uptime.\n<code>/restart</code> : restart bot.\n<code>/usage</code> : get Memory Usage.\n<code>/shutdown</code> : shutdown bot.\n<code>/getSettings</code> : json encoded settings.\n<code>/shutdown</code> : shutdown bot.\n";
+                    $answer .= "\n<code>/last [FLAGS] [COUNT] [reset]</code> : get new message json encoded.";
                     $x = 0;
                     foreach (Constants::LAST_FLAG as $key => $value) {
-                        $fs .= ($x % 2 == 0 ? "\n" : '') . "   <code>$key</code> : $value";
+                        $answer .= ($x % 2 == 0 ? "\n" : '') . "   <code>$key</code> : $value";
                         $x++;
                     }
-                    $fe .= "\n<code>/run [CODE]</code> run php code.(access to \$message, \$chat,\$reply_to_message_id variable)";
-                    $fe .= "\n<code>/query [QUERY]</code> run database query.";
+                    $answer .= "\n<code>/run [CODE]</code> run php code.(access to \$message, \$chat,\$reply_to_message_id variable)";
+                    $answer .= "\n<code>/query [QUERY]</code> run database query.";
                     break;
                 case '/shutdown':
-                    $fs = __('shutdown');
-                    $this->sendMessage($chat, $fs);
+                    $this->sendMessage($chat, __('shutdown'));
                     $this->stop();
                     break;
                 case '/getsettings':
-                    $fe = __('json', ['json' => json_encode($this->settings, 448)]);
+                    $answer = __('json', ['json' => json_encode($this->settings, 448)]);
                     break;
                 case '/cancel':
                     $this->cancellation->cancel();
                     $this->cancellation = new \Amp\DeferredCancellation();
-                    $fe = __('canceled');
+                    $answer = __('canceled');
                     break;
                 case '/test':
+                    $answer = 'test';
                     break;
                 default:
-                    $fe = __('bad_command');
+                    $answer = __('bad_command');
             }
-            $this->answer($chat,$fs ?? null,$fe ?? null,$message_to_edit ?? $message,$reply2id ?? null);
+            if(isset($answer)) {
+                if ((new FilterSavedMessage())->initialize($this)->apply($message)){//send new message in SavedMessage
+                    $fs = $answer;
+                }else $fe = $answer;//other
+                $this->answer($chat, $fs ?? null, $fe ?? null, $message_to_edit ?? $message, $reply2id ?? null);
+            }
         }
     }
 
@@ -432,27 +436,38 @@ Trait CommandTrait{
     public function saveStory(Message $message):void{
         $message_text = $message->message;
         $chat = $message->chatId;
-        if(str_starts_with($message_text,'/savestory')) {
-            if (preg_match('#^\/getstory\shttps://t\.me/(\w+)/s/(\d+)$#', $message_text, $matches)) {
-                $user_story = $matches[1];
-                $story_id = [$matches[2]];
-            }elseif(($reply = $message->getReply()) !== null and ($reply instanceof Message\PrivateMessage or $reply instanceof Message\ChannelMessage) and $reply->fromId) {
+        if(!str_starts_with($message_text,'/savestory')) return;
+        if (preg_match('#^\/getstory\shttps://t\.me/(\w+)/s/(\d+)$#', $message_text, $matches)) {
+            $user_story = $matches[1];
+            $story_id = [$matches[2]];
+            $message_to_edit = $message->reply(__('saving_story'));
+        }elseif(($reply = $message->getReply()) !== null and ($reply instanceof Message\PrivateMessage or $reply instanceof Message\ChannelMessage)) {
+            if(isset($reply->fromId) and $reply->fromId != null){
                 $user_story = $reply->fromId;
-            }elseif($message_text === '/getstory' and $message->out and $message->chatId != $this->getSelf()['id']){
-                $user_story = $message->chatId;
-            }
-            if(isset($user_story)){
-                if(isset($story_id)){
-                    $stories = $this->stories->getStoriesByID($user_story,$story_id);
-                }else $stories = $this->stories->getPeerStories($user_story);
-                if(!empty($stories['stories'])){
-                    foreach ($stories['stories'] as $story) {
-                        $this->messages->sendMedia(peer: $chat, reply_to_msg_id: ($reply ?? $message)->id, media: $story['media']);
-                    }
+                $message_to_edit = $message->reply(__('saving_story'));
+            }else $fe = __('cant_find_user_from_message');
+        }elseif($message_text === '/getstory' and $message->out and $message->chatId != $this->getSelf()['id']){//send to private to get story
+            $user_story = $message->chatId;
+            $message_to_edit = $this->sendMessage($this->save_id,__('saving_story'));
+            $message->delete();
+        }else $fe = __('bad_command');
+
+        if(isset($user_story)){
+            $user_story = $this->getId($user_story);
+            $tag = $this->mention($user_story);
+            $message_to_edit->editText(__('saving_story_tag',['tag'=>$tag]),parseMode: Constants::DefaultParseMode);
+            if(isset($story_id)){
+                $stories = $this->stories->getStoriesByID($user_story,$story_id);
+            }else $stories = $this->stories->getPeerStories($user_story);
+            if(!empty($stories['stories'])){
+                $fe = __('get_story_success',['tag'=>$tag]);
+                foreach ($stories['stories'] as $story) {
+                    $this->messages->sendMedia(peer: $chat, reply_to_msg_id: ($reply ?? $message)->id, media: $story['media']);
                 }
-            }else $fs = __('bad_command');
+            }else $fe = __('no_story_exist',['tag'=>$tag]);
         }
-        $this->stories->getPeerStories();
+
+        $this->answer($chat,$fs ?? null,$fe ?? null,$message_to_edit ?? $message,$reply2id ?? null);
     }
     private function answer(int|string $peer,string $fs = null,string $fe = null,Message $message_to_edit = null,int|string|Message $reply2id = null):void{
         $reply2id = $reply2id instanceof Message ? $reply2id->id : $reply2id;

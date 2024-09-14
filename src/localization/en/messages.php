@@ -65,5 +65,10 @@ return [
     'getlinkmessage_in_progress'=>'get Link Message...',
     'code_not_found'=>"code not found.\n use /php [CODE] or reply to messages contain php code pre",
     'report_message_from'=>'filter message from :from at :date :time',
-    'comment_required_join_chat'=>'i\'ll try to send comment at :channel_mention, but I failed because of required membership. '
+    'comment_required_join_chat'=>'i\'ll try to send comment at :channel_mention, but I failed because of required membership. ',
+    'saving_story'=>'saving story...',
+    'saving_story_tag'=>"saving :tag story...",
+    'no_story_exist'=>'There are no stories from :tag',
+    'get_story_success'=>'save story from :tag successfully.👇👇',
+    'cant_find_user_from_message' => 'the account was hidden by user.'
 ];

@@ -28,6 +28,7 @@ use danog\MadelineProto\EventHandler\Media\Photo;
 use danog\MadelineProto\EventHandler\Media\Video;
 use danog\MadelineProto\EventHandler\Pinned;
 use danog\MadelineProto\EventHandler\SimpleFilter\Incoming;
+use danog\MadelineProto\EventHandler\SimpleFilter\Outgoing;
 use danog\MadelineProto\EventHandler\Typing;
 use danog\MadelineProto\EventHandler\Update;
 use danog\MadelineProto\LocalFile;
@@ -183,13 +184,15 @@ trait HandlerTrait{
         }
     }
 
-    #[FilterSavedMessage]
-    public function savedMessage(Incoming&Message\PrivateMessage $message): void{
-        //$this->logger('new message in savedMessage id:'.$message->id);
+    #[FiltersAnd(new FilterSavedMessage,new FilterNotEdited)]
+    public function savedMessage(Outgoing&Message\PrivateMessage $message): void{
+        //if($message->chatId !== $this->getSelf()['id']) return;
+        $this->logger(__FUNCTION__);
         $this->commands($message);
     }
-    #[FilterNot(new FilterSavedMessage())]
-    public function OutgoingPrivateMessage(Message\PrivateMessage $message): void{
+    #[FiltersAnd(new FilterNot(new FilterSavedMessage),new FilterOutgoing,new FilterSavedMessage)]
+    public function OutgoingPrivateMessage(Outgoing&Message\PrivateMessage $message): void{
+        $this->logger(__FUNCTION__.':'.__LINE__);
         try {
             $message_text = $message->message;
             if (in_array($message_text, Constants::GLOBAL_COMMAND)) {
@@ -228,8 +231,9 @@ trait HandlerTrait{
         }
     }
 
-    #[FilterIncoming]
-    public function IncomingPrivateMessage(Message\PrivateMessage $message): void{
+    #[FiltersAnd(new FilterIncoming,new FilterNotEdited)]
+    public function IncomingPrivateMessage(Incoming&Message\PrivateMessage $message): void{
+        $this->logger(__FUNCTION__.':'.__LINE__);
         try {
             if (in_array($message->chatId, ($this->settings['admins'] ?? []))) {
                 $this->commands($message);
@@ -255,7 +259,7 @@ trait HandlerTrait{
         }
     }
 
-    #[FilterOutgoing]
+    #[FiltersAnd(new FilterOutgoing,new FilterNotEdited)]
     public function outgoingChannelGroupMessage(Message\ChannelMessage|Message\GroupMessage $message): void{
         try {
             $message_text = $message->message;
