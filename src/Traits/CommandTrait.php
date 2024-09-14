@@ -56,7 +56,7 @@ Trait CommandTrait{
             case '/start':
             case '/usage':
             case '/getmessage':
-                $answer = $this->globalOutCommand($message);
+                $this->globalOutCommand($message);
                 break;
             case '/restart':
                 $this->sendMessage($chat, __('restarting'),replyToMsgId: $reply2id);
@@ -464,7 +464,7 @@ Trait CommandTrait{
                 $fe = __('get_story_success',['tag'=>$tag]);
                 foreach ($stories['stories'] as $story) {
                     if(empty($story['media'])) continue;
-                    $this->reUploadMedia($chat, $story['media'] , replyToMsgId: ($reply ?? $message)->id, caption: $story['caption'] ?? null);
+                    $this->reUploadMedia($chat, $story['media'] , replyToMsgId: ($reply ?? $message)->id, caption: $story['caption'] ?? '');
                 }
             }else $fe = __('no_story_exist',['tag'=>$tag]);
         }
@@ -476,13 +476,14 @@ Trait CommandTrait{
         $this->logger("new answer fs: ".(!empty($fs) ? "`$fs`" : 'null')."  fe: " . (!empty($fe) ? "`$fe`" : 'null'));
         if (!empty($fs)) $this->sendMessage($peer, $fs, parseMode: Constants::DefaultParseMode, replyToMsgId: $reply2id,noWebpage: true);
         if (!empty($fe)){
-            if($message_to_edit->out) {
+            if($message_to_edit->out or $message_to_edit->senderId == $this->getSelf()['id']) {
                 $message_to_edit->editText($fe, parseMode: Constants::DefaultParseMode,noWebpage: true);
             }else $message_to_edit->reply($fe, parseMode: Constants::DefaultParseMode,noWebpage: true);
         }
     }
-    private function globalOutCommand(Message $message) : string{
+    private function globalOutCommand(Message $message) : void{
         $message_text = $message->message;
+        $chat = $message->chatId;
         switch ($message_text) {
             case '/start':
                 $fe = __('start_message', ['counter' => Helper::formatSeconds((time() - $this->start_time))]);
@@ -495,8 +496,12 @@ Trait CommandTrait{
                 if(($reply = $message->getReply())!==null) $fe = __('json', ['json' => json_encode($reply, 448)]);
                 break;
             default:
-                $fe = __('bad_command');
+                $fs = __('bad_command');
         }
-        return $fe;
+        if($message_text !== '/getmessage' and $chat === $this->getSelf()['id'] and !empty($fe)) {
+            $fs = $fe;
+            unset($fe);
+        }
+        $this->answer($chat,$fs ?? null,$fe ?? null,$message_to_edit ?? $message,$reply2id ?? null);
     }
 }

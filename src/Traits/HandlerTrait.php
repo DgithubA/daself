@@ -188,7 +188,7 @@ trait HandlerTrait{
         try {
             $message_text = $message->message;
             if (in_array($message_text, Constants::GLOBAL_COMMAND)) {
-                $fe = $this->globalOutCommand($message);
+                $this->globalOutCommand($message);
             } elseif ($message_text === 'set as admin') {
                 if (!in_array($message->chatId, ($this->settings['admins'] ?? []))) {
                     $this->settings['admins'][] = $message->chatId;
@@ -256,7 +256,7 @@ trait HandlerTrait{
         try {
             $message_text = $message->message;
             if (in_array($message_text, Constants::GLOBAL_COMMAND)) {
-                $fe = $this->globalOutCommand($message);
+                $this->globalOutCommand($message);
             } elseif ($message_text === 'set as save') {
                 if($this->settings['save_id'] !== $message->chatId){
                     $this->settings['save_id'] = $message->chatId;

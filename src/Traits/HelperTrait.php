@@ -169,7 +169,7 @@ trait HelperTrait{
         $type = Helper::mime2type($mime_type);
         $this->sendMediaByType($type,$peer,$file,$caption,$replyToMsgId,$file_name,$cb);
     }
-    private function sendMediaByType(string $type,int|string $peer,\danog\MadelineProto\EventHandler\Message|\danog\MadelineProto\EventHandler\Media|\danog\MadelineProto\LocalFile|\danog\MadelineProto\RemoteUrl|\danog\MadelineProto\BotApiFileId|\Amp\ByteStream\ReadableStream $file,?string $caption = '',int $replyToMsgId = null,string $file_name = null,callable $cb = null): void{
+    private function sendMediaByType(string $type,int|string $peer,\danog\MadelineProto\EventHandler\Message|\danog\MadelineProto\EventHandler\Media|\danog\MadelineProto\LocalFile|\danog\MadelineProto\RemoteUrl|\danog\MadelineProto\BotApiFileId|\Amp\ByteStream\ReadableStream $file,string $caption = '',int $replyToMsgId = null,string $file_name = null,callable $cb = null): void{
         $cancellation = $this->cancellation->getCancellation();
         switch ($type){
             case Document::class:
