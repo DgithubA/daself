@@ -85,11 +85,20 @@ class Helper{
             return number_format($size/(1<<10),2)."KB";
         return number_format($size)." bytes";
     }
-    public static function myJson(string $text):string{
-        if(json_validate($text)){
-            return __('json',['json'=>$text]);
-        }
-        return __('code',['code'=>$text]);
+    public static function myJson(string|array $data,?int $flags = null):string{
+        $def_flags = JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_IGNORE|JSON_THROW_ON_ERROR;
+        if(is_array($data)) $data = json_encode($data,$flags ?? $def_flags);
+        if(json_validate($data)) return __('json',['json'=>$data]);
+        return __('code',['code'=>$data]);
+    }
+
+    public static function secondsToNext(int $sec = 60): int
+    {
+        $now = time();
+        $next_minute = ceil($now / 60) * 60;
+        $diff = $next_minute - $now - (60 - $sec);
+        $diff <= 0 && $diff += 60;
+        return $diff;
     }
 
     public static function mime2type(string $mime_type):string{

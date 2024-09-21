@@ -1,16 +1,32 @@
 <?php
 
 namespace APP\Traits;
+use Amp\ByteStream\ReadableBuffer;
 use APP\Constants\Constants;
 use APP\Filters\FilterSavedMessage;
 use APP\Helpers\Helper;
 use danog\MadelineProto\EventHandler\Media;
 use danog\MadelineProto\EventHandler\Message\Entities\Pre;
 use danog\MadelineProto\LocalFile;
+use danog\MadelineProto\ParseMode;
 use danog\MadelineProto\RPCErrorException;
 use danog\MadelineProto\EventHandler\Message;
+
 Trait CommandTrait{
 
+    public function testCommand(Message $message): void{
+        $message_text = trim($message->message);
+        $lower_case_message = mb_strtolower($message_text);
+        $chat = $message->chatId;
+        $fs = "test message";
+        //==============================================
+        $data = array_keys(\danog\MadelineProto\TL\Conversion\Extension::ALL_MIMES);
+        $this->ormProperty['test']['test'] = "test";
+        //=====================
+        if(isset($data)) $fs = Helper::myJson($data);
+        //===============================================
+        $this->answer($chat,$fs ?? null,$fe ?? null,$message_to_edit ?? $message,$reply2id ?? null);
+    }
     public function commands(Message\PrivateMessage $message): void{
         if($message->editDate !== null) return;
         try {
@@ -85,7 +101,7 @@ Trait CommandTrait{
                 $answer = __('canceled');
                 break;
             case '/test':
-                $answer = 'test';
+                $this->testCommand($message);
                 break;
             default:
                 $answer = __('bad_command');
@@ -158,7 +174,6 @@ Trait CommandTrait{
             foreach ($entities as $entity) {
                 if ($entity instanceof Pre && $entity->language === 'php') {
                     $code = substr($reply->message ?? $message_text, $entity->offset, $entity->length);
-                    $this->logger($code);
                     break;
                 }
             }
@@ -183,17 +198,22 @@ Trait CommandTrait{
             ob_end_clean();
             $result = trim($result);
             $error = trim($error);
-            $text = !empty($result) ? __('code',['code'=>$result]) : "empty result.";
+            if(Constants::DefaultParseMode === ParseMode::HTML){
+                $result = htmlspecialchars($result);
+                $error = htmlspecialchars($error);
+            }
+            $code_result = false;
+            if($code_result){
+                $result = __('code',['code'=>$result]);
+            }
+            $text = !empty($result) ? $result : "empty result.";
             $text .= !empty($error) ? __('bold',['bold'=>"\n---------------\nErrors :\n"]) . $error : "";
             try {
                 $text = __('results', ['data' => trim($text)]);
                 $message_to_edit->editText($text, parseMode: Constants::DefaultParseMode);
             } catch (\Throwable $e) {
                 $message_to_edit->editText("#error for edit result:\n<code>" . $e->getMessage() . "</code>\nResult file:👇🏻", parseMode: Constants::DefaultParseMode);
-                $file_path = './data/run-result.txt';
-                \Amp\File\write($file_path, $text);
-                $this->sendDocument($chat, (new LocalFile($file_path)), caption: '<code>' . $match[2] . '</code>', parseMode: Constants::DefaultParseMode, fileName: 'run-result.txt', mimeType: 'text/plain', replyToMsgId: $message_to_edit->id);
-                \Amp\File\deleteFile($file_path);
+                $this->sendDocument(peer: $chat, file: new ReadableBuffer($text),caption: '<code>' . $code . '</code>', parseMode: Constants::DefaultParseMode, fileName: 'run-result.txt', mimeType: 'text/plain', replyToMsgId: $message_to_edit->id);
             }
             $this->logger("end runner");
         }else $fe = __('code_not_found');
@@ -316,7 +336,8 @@ Trait CommandTrait{
                     $download_script_url = !empty($_ENV['DL_SERVER_HOST']) ? $_ENV['DL_SERVER_HOST'] : null;
                     if (isset($this->settings['DL_SERVER_HOST'])) $download_script_url = $this->settings['DL_SERVER_HOST'];
                     try {
-                        $download_link = $this->getDownloadLink($media, $download_script_url);
+                        $name = preg_replace("~^(.+)\_(\d+)\.(\w{2,5})$~", '$1.$3', $media->fileName);
+                        $download_link = $this->getDownloadLink($media, $download_script_url,name: $name);
                         $fe = __('code', ['code' => htmlspecialchars($download_link)]);
                     } catch (\Exception $e) {
                         if (str_contains($e->getMessage(), 'downloadServer(')) {
@@ -497,8 +518,6 @@ Trait CommandTrait{
             case '/savestory':
                 $this->saveStory($message);
                 break;
-            default:
-                $fs = __('bad_command');
         }
         if($message_text !== '/getmessage' and $chat === $this->getSelf()['id'] and !empty($fe)) {
             $fs = $fe;

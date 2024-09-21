@@ -9,7 +9,6 @@ use APP\Filters\FilterSavedMessage;
 use APP\Filters\FilterUserStatus;
 use APP\Helpers\Helper;
 use danog\MadelineProto\EventHandler\AbstractStory;
-use danog\MadelineProto\EventHandler\Attributes\Handler;
 use danog\MadelineProto\EventHandler\CallbackQuery;
 use danog\MadelineProto\EventHandler\Channel\ChannelParticipant;
 use danog\MadelineProto\EventHandler\Delete;
@@ -25,13 +24,11 @@ use danog\MadelineProto\EventHandler\Filter\FilterOutgoing;
 use danog\MadelineProto\EventHandler\Filter\FilterPrivate;
 use danog\MadelineProto\EventHandler\Filter\FilterService;
 use danog\MadelineProto\EventHandler\Media\Photo;
-use danog\MadelineProto\EventHandler\Media\Video;
 use danog\MadelineProto\EventHandler\Pinned;
 use danog\MadelineProto\EventHandler\SimpleFilter\Incoming;
 use danog\MadelineProto\EventHandler\SimpleFilter\Outgoing;
 use danog\MadelineProto\EventHandler\Typing;
 use danog\MadelineProto\EventHandler\Update;
-use danog\MadelineProto\LocalFile;
 use danog\MadelineProto\RPCErrorException;
 use danog\MadelineProto\VoIP;
 use danog\MadelineProto\EventHandler\Message;
@@ -88,8 +85,7 @@ trait HandlerTrait{
         }
     }
 
-    #[Handler]
-    public function allUpdates(Update $update): void{
+    public function onAny(Update $update): void{
         try {
             if (empty($this->settings['last'])) return;
             foreach ($this->settings['last'] as $key => $value) {

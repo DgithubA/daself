@@ -19,7 +19,7 @@ return [
     'comment_posted'=>"<b>comment :x successfully posted in</b> :channel_mention \n <b>text:</b>\":text\" \n_-_-_-_-_-_-_-_-_-_\n",
     'ttl_caption'=>'self-Destructing :type from :user_mention',
     'admin' => [
-        'ur_admin'=> 'You are an admin. Try: /start',
+        'ur_admin'=> "You are an admin.\nTry: <code>/start</code>",
         'ur_not_admin'=>'You are no longer an admin.',
         'user_is_admin' => 'user :mention set as admin.',
         'user_is_not_admin' => 'user :mention is no longer an admin.',

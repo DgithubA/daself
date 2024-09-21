@@ -2,6 +2,7 @@
 
 namespace APP\Traits;
 
+use Amp\ByteStream\ReadableBuffer;
 use Amp\Http\Client\Request;
 use APP\Constants\Constants;
 use APP\Helpers\Helper;
@@ -20,7 +21,7 @@ use danog\MadelineProto\TL\Conversion\Extension;
 use Throwable;
 trait HelperTrait{
     private function myReport(string $message , ?int $replyToMsgId = null) : Message{
-        return $this->sendMessage($this->save_id,$message,parseMode: Constants::DefaultParseMode,replyToMsgId: $replyToMsgId);
+        return $this->sendMessage($this->save_id,$message,parseMode: Constants::DefaultParseMode,replyToMsgId: $replyToMsgId,noWebpage: true);
     }
 
     private function mention(int $peerId, int|string $messageId = null, string $bname = null): string{
@@ -117,9 +118,7 @@ trait HelperTrait{
                     $put = $message . "\n\n" . $e;
                     if (isset($update_string)) $put .= "\n Update:" . "\n\nfor this i cant send report:" . $g->getMessage();
                     $put .= "\n\nfor this i cant send report:" . $g->getMessage();
-                    $file_path = Constants::DataFolderPath . 'error.txt';
-                    \Amp\File\write($file_path, $put);
-                    $this->sendDocument($report_to,new LocalFile($file_path),caption: "<b>#error as " . $function . "</b>", parseMode: Constants::DefaultParseMode);
+                    $this->sendDocument(peer: $report_to,file: new ReadableBuffer($put),caption: "<b>#error as " . $function . "</b>", parseMode: Constants::DefaultParseMode);
                 }
             }
             if ($anti_spam_status) {

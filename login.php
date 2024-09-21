@@ -11,13 +11,12 @@ try {
     echo $e;
     exit(1);
 }
-
 if ($api->getAuthorization() !== API::LOGGED_IN) {
     $get_self = $api->start();
 }
 
 if (!$api->isSelfUser()) {
-    echo "Please login as user.";
+    echo "Please login as user.\n";
     $api->logout();
     rmdir($session_dir);
-} else echo "Successfully login in as user.";
+} else echo "Successfully login in as user.\n";

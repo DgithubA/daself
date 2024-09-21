@@ -27,12 +27,15 @@ trait ServerTrait{
             if (!$request->hasQueryParameter('f')) {
                 return new Response(body: Lang::$current_lang["dl.php_powered_by_madelineproto"]);
             }
-
+            $file_id = $request->getQueryParameter('f');
+            $mime_type = $request->getQueryParameter('m');
+            $messageMedia = $this->unpackFileId($file_id);
+            $messageMedia['mime_type'] = $mime_type;
             return $this->downloadToResponse(
-                messageMedia: $request->getQueryParameter('f'),
+                messageMedia: $messageMedia,
                 request: $request,
                 size: (int)$request->getQueryParameter('s'),
-                mime: $request->getQueryParameter('m'),
+                mime: $mime_type,
                 name: $request->getQueryParameter('n')
             );
         }elseif ($request->getUri()->getPath() === '/status') {
