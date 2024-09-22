@@ -70,5 +70,6 @@ return [
     'saving_story_tag'=>"saving :tag story...",
     'no_story_exist'=>'There are no stories from :tag',
     'get_story_success'=>'save story from :tag successfully.👇👇',
-    'cant_find_user_from_message' => 'the account was hidden by user.'
+    'cant_find_user_from_message' => 'the account was hidden by user.',
+    'download_link'=>"<a href=':link'>download link:</a>\n <code>:link</code>"
 ];

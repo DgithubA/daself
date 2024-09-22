@@ -71,7 +71,7 @@ Trait CommandTrait{
             case '/start':
             case '/usage':
             case '/getmessage':
-                $this->globalOutCommand($message);
+                $this->globalAddsCommand($message);
                 break;
             case '/restart':
                 $this->sendMessage($chat, __('restarting'),replyToMsgId: $reply2id);
@@ -333,17 +333,32 @@ Trait CommandTrait{
             if (isset($replayed_message->media) and $replayed_message->media instanceof Media) {
                 $media = $replayed_message->media;
                 if ($media->size > 10 * 1024 * 1024) {//size is less than 10MB
+
                     $download_script_url = !empty($_ENV['DL_SERVER_HOST']) ? $_ENV['DL_SERVER_HOST'] : null;
                     if (isset($this->settings['DL_SERVER_HOST'])) $download_script_url = $this->settings['DL_SERVER_HOST'];
-                    try {
+                    if(!empty($download_script_url)) {
                         $name = preg_replace("~^(.+)\_(\d+)\.(\w{2,5})$~", '$1.$3', $media->fileName);
-                        $download_link = $this->getDownloadLink($media, $download_script_url,name: $name);
-                        $fe = __('code', ['code' => htmlspecialchars($download_link)]);
-                    } catch (\Exception $e) {
-                        if (str_contains($e->getMessage(), 'downloadServer(')) {
-                            $fe = __('download_script_url_wrong');
-                        } else throw $e;
-                    }
+                        try {
+                            $download_link = $this->getDownloadLink($media, $download_script_url, name: $name);
+                        } catch (\Exception $e) {
+                            if (str_contains($e->getMessage(), 'downloadServer(')) {
+                                $fe = __('download_script_url_wrong');
+                            } else $fe = $e->getMessage();
+                        }
+
+                        if (isset($download_link) && is_string($download_link)) {
+                            $downloads = $this->ormProperty['downloads'] ?? [];
+                            $id = Helper::newItemWithRandomId(function ($uniq_id) use ($downloads) {
+                                return (!isset($downloads[$uniq_id]));
+                            });
+                            $downloads[$id] = $media->getDownloadInfo();
+                            $downloads[$id]['name'] = $name;
+                            $this->ormProperty['downloads'] = $downloads;
+
+                            $my_custom_url = $download_script_url . '?' . http_build_query(['id' => $id]);
+                            $fe = __('download_link', ['link' => htmlspecialchars($my_custom_url)]);
+                        }
+                    }else $fe = __('download_script_url_wrong');
                 } else $fe = __('file_is_too_small', ['size' => Helper::humanFileSize($media->size), 'minimumSize' => '10MB']);
             } else $fe = __('replayed_no_media');
         } elseif (str_starts_with($message_text, '/upload')) {
@@ -501,9 +516,38 @@ Trait CommandTrait{
             }else $message_to_edit->reply($fe, parseMode: Constants::DefaultParseMode,noWebpage: true);
         }
     }
-    private function globalOutCommand(Message $message) : void{
+    private function globalOutMessage(Message $message) : void{
+        if(!$message->out) return;
+
+        $this->globalAddsCommand($message);
         $message_text = $message->message;
         $chat = $message->chatId;
+        if(preg_match('/^doexp(?:(?:\s(\d{1,2}))?:(.+))$/',$message_text,$m)){
+            $default_sleep_time = 1;
+            $sleep_time = (!empty($m[1]) ? (float)($m[1] / 10) : $default_sleep_time);
+            $this->messages->getMessages();
+            $words = explode(" ", trim($m[2]));
+            $text = "";
+            foreach ($words as $word) {
+                $text .= " " . $word;
+                if ($sleep_time != 0) $this->sleep($sleep_time);
+                try {
+                    $message->editText($text,parseMode: Constants::DefaultParseMode,noWebpage: true);
+                } catch (\Throwable $e) {
+                    if($e instanceof RPCErrorException){
+                        if (preg_match("~FLOOD_WAIT_(\d+)~", $e->rpc, $m)) {
+                            $this->sleep($m[1]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public function globalAddsCommand(Message $message):void{
+        $message_text = $message->message;
+        $chat = $message->chatId;
+
         switch ($message_text) {
             case '/start':
                 $fe = __('start_message', ['counter' => Helper::formatSeconds((time() - $this->start_time))]);
@@ -519,7 +563,7 @@ Trait CommandTrait{
                 $this->saveStory($message);
                 break;
         }
-        if($message_text !== '/getmessage' and $chat === $this->getSelf()['id'] and !empty($fe)) {
+        if($message_text !== '/getmessage' and $chat === $this->getSelf()['id'] and !empty($fe)) {//send new message instead edit in SV expect /getmessage
             $fs = $fe;
             unset($fe);
         }

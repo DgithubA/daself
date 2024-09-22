@@ -78,7 +78,7 @@ features. _made by [madelineproto](https://docs.madelineproto.xyz)_***
 - [ ] time/date diff in fname/bio/lname
 - [ ] random word in fname/bio/lname
 - [ ] spammer and editor (Sequentially edit a message based on a previous setting)
-- [ ] split message peer word
+- [X] split message peer word
 - [X] link to file & file to link
 - [X] block user (delete two-way messages)
 - [ ] reactions message (count reactions emoji in message)

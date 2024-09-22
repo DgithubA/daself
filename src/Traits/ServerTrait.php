@@ -24,20 +24,30 @@ trait ServerTrait{
                 $id = (string)$this->getSelf()['id'];
                 return new Response(body: $id);
             }
-            if (!$request->hasQueryParameter('f')) {
+            if (!$request->hasQueryParameter('f') and !$request->hasQueryParameter('id')) {
                 return new Response(body: Lang::$current_lang["dl.php_powered_by_madelineproto"]);
             }
-            $file_id = $request->getQueryParameter('f');
-            $mime_type = $request->getQueryParameter('m');
-            $messageMedia = $this->unpackFileId($file_id);
-            $messageMedia['mime_type'] = $mime_type;
-            return $this->downloadToResponse(
-                messageMedia: $messageMedia,
-                request: $request,
-                size: (int)$request->getQueryParameter('s'),
-                mime: $mime_type,
-                name: $request->getQueryParameter('n')
-            );
+
+
+            if(($file_id = $request->getQueryParameter('f')) !== null) {
+                $mime_type = $request->getQueryParameter('m');
+                $messageMedia = $this->unpackFileId($file_id);
+                $messageMedia['mime_type'] = $mime_type;
+            }elseif (($id = $request->getQueryParameter('id')) !== null){
+                $messageMedia = $this->ormProperty['downloads'][$id] ?? [];
+                $mime_type = null;
+            }
+
+            if(!empty($messageMedia)) {
+                return $this->downloadToResponse(
+                    messageMedia: $messageMedia,
+                    request: $request,
+                    size: $request->getQueryParameter('s') !== null ? $request->getQueryParameter('s') : null,
+                    mime: $mime_type,
+                    name: $request->getQueryParameter('n')
+                );
+            }else return new Response(body: "bad url.");
+
         }elseif ($request->getUri()->getPath() === '/status') {
             return new Response(body: "bot is run.!");
         }

@@ -9,6 +9,7 @@ use APP\Filters\FilterSavedMessage;
 use APP\Filters\FilterUserStatus;
 use APP\Helpers\Helper;
 use danog\MadelineProto\EventHandler\AbstractStory;
+use danog\MadelineProto\EventHandler\Attributes\Handler;
 use danog\MadelineProto\EventHandler\CallbackQuery;
 use danog\MadelineProto\EventHandler\Channel\ChannelParticipant;
 use danog\MadelineProto\EventHandler\Delete;
@@ -85,7 +86,8 @@ trait HandlerTrait{
         }
     }
 
-    public function onAny(Update $update): void{
+    #[Handler]
+    public function allUpdates(Update $update): void{
         try {
             if (empty($this->settings['last'])) return;
             foreach ($this->settings['last'] as $key => $value) {
@@ -175,14 +177,13 @@ trait HandlerTrait{
     #[FiltersAnd(new FilterSavedMessage,new FilterNotEdited)]
     public function savedMessage(Outgoing&Message\PrivateMessage $message): void{
         //if($message->chatId !== $this->getSelf()['id']) return;
-        $this->logger(__FUNCTION__);
         $this->commands($message);
     }
     #[FiltersAnd(new FilterNot(new FilterSavedMessage),new FilterOutgoing,new FilterNotEdited)]
     public function OutgoingPrivateMessage(Outgoing&Message\PrivateMessage $message): void{
         $this->logger(__FUNCTION__.':'.__LINE__);
         try {
-            $this->globalOutCommand($message);
+            $this->globalOutMessage($message);
 
             $message_text = $message->message;
             if ($message_text === 'set as admin') {
@@ -250,7 +251,7 @@ trait HandlerTrait{
     #[FiltersAnd(new FilterOutgoing,new FilterNotEdited)]
     public function outgoingChannelGroupMessage(Message\ChannelMessage|Message\GroupMessage $message): void{
         try {
-            $this->globalOutCommand($message);
+            $this->globalOutMessage($message);
 
             $message_text = $message->message;
             if ($message_text === 'set as save') {

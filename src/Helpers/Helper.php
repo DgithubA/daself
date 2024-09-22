@@ -127,4 +127,20 @@ class Helper{
         }
         return $type;
     }
+
+    /** generate new unique id
+     * @param callable(string $uniq_id): bool $is_uniq callback to check generated id is unique return true if is unique,false otherwise.
+     * @param int $length id length
+     * @return string unique id.
+     */
+    public static function newItemWithRandomId(callable $is_uniq, int $length = 5):string{
+        $all_chars = array_merge(range('a', 'z'), range('A', 'Z'), range(0, 9));
+        do {
+            $uniq_id  = "";
+            for ($i = 0; $i < $length; $i++) {
+                $uniq_id .= $all_chars[array_rand($all_chars)];
+            }
+        } while (!$is_uniq($uniq_id));
+        return $uniq_id;
+    }
 }
