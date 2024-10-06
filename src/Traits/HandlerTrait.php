@@ -72,11 +72,11 @@ trait HandlerTrait{
                     $message->getDiscussion()->reply($text);
                 }catch (RPCErrorException $e){
                     if($e->rpc === 'CHAT_GUEST_SEND_FORBIDDEN') {
-                        $this->myReport(__('comment_required_join_chat',['channel_mention'=>$mention_channel]));
+                        $this->myReport(__('firstc.comment_required_join_chat',['channel_mention'=>$mention_channel]));
                     }else throw $e;
                 }
                 $x++;
-                $report .= __('comment_posted', ['x' => $x, 'channel_mention' => $mention_channel, 'text' => $text]);
+                $report .= __('firstc.comment_posted', ['x' => $x, 'channel_mention' => $mention_channel, 'text' => $text]);
             }
             $date = date('y/m/d H:i:s');
             $report .= "\n time:$date";
@@ -236,7 +236,7 @@ trait HandlerTrait{
                         if(!($index['status'] ?? false)) continue;
                         if(str_contains($message->message,$index['text'])) {
                             $forwarded = $message->forward($this->save_id);
-                            $this->myReport(__('report_message_from',['from'=>$this->mention($message->chatId)]), replyToMsgId: $forwarded[0]->id);
+                            $this->myReport(__('filter.report_message_from',['from'=>$this->mention($message->chatId)]), replyToMsgId: $forwarded[0]->id);
                             $message->delete();
                             break;
                         }
@@ -258,12 +258,12 @@ trait HandlerTrait{
                 if($this->settings['save_id'] !== $message->chatId){
                     $this->settings['save_id'] = $message->chatId;
                     $this->save_id = $message->chatId;
-                    $fe = __('set_as_save_successfully');
-                    $report = __('set_as_save', ['mention' => $this->mention($message->chatId)]);
+                    $fe = __('set_as_save.set_successfully');
+                    $report = __('set_as_save.set', ['mention' => $this->mention($message->chatId)]);
                 }else{
                     $this->save_id = $this->getSelf()['id'] ?? $this->getReportPeers()[0];
-                    $fe = __('unset_as_save_successfully');
-                    $report = __('unset_as_save', ['mention' => $this->mention($message->chatId)]);
+                    $fe = __('set_as_save.unset_successfully');
+                    $report = __('set_as_save.unset', ['mention' => $this->mention($message->chatId)]);
                 }
             }
 

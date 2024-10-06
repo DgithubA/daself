@@ -85,3 +85,5 @@ features. _made by [madelineproto](https://docs.madelineproto.xyz)_***
 - [X] save/download stories
 - [ ] delete duplicate file/media in chat.
 - [X] download and re-upload protected channel file. 
+- [ ] convert media (like audio2voice,video2gif,sticker2photo)
+- [ ] change media attr ()
