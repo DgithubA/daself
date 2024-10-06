@@ -188,4 +188,16 @@ trait HelperTrait{
                 break;
         }
     }
+
+    /**
+     * @param Media $media
+     * @param callable(LocalFile $local_file): void $after_download
+     * @return void
+     */
+    private function downloadAndReUpload(Media $media, callable $after_download): void{
+        $output_file_name = $media->downloadToDir(Constants::DataFolderPath);
+        $local_file = new LocalFile($output_file_name);
+        $after_download($local_file);
+        \Amp\File\deleteFile($output_file_name);
+    }
 }

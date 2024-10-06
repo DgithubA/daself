@@ -2,6 +2,7 @@
 
 namespace APP\Traits;
 use Amp\ByteStream\ReadableBuffer;
+use Amp\File\File;
 use APP\Constants\Constants;
 use APP\Filters\FilterSavedMessage;
 use APP\Helpers\Helper;
@@ -494,58 +495,69 @@ Trait CommandTrait{
     public function convertMedia(Message $message):bool{
         $message_text = $message->message;
         $chat = $message->chatId;
-        if(!preg_match('~\/convert\s(video|gif|voice|audio|sticker|photo)~',$message_text,$matches)) return false;
-        if(is_null($reply = $message->getReply())) return false;
+        if(!preg_match('~\/convert\s(?:to\s)?(video|gif|voice|audio|sticker|photo)~',$message_text,$matches)) return false;
+        if(is_null($reply = $message->getReply())) return $this->answer($chat,fs: __('must_reply_with_media'));
         if(!isset($reply->media)) return $this->answer($chat,fs: __('replayed_no_media'));
 
         $to_what = $matches[1];
         $media = $reply->media;
-        $file_info = $this->getFileInfo($media);
-        $attr = $file_info['document']['attributes'];
-        $mime = $media->mimeType;
-        $message_to_edit = $message->reply(__('convert.convert'));
+        $message_to_edit = $message->reply(__('convert.converting'));
 
         switch ($media::class){
             case Media\Voice::class://voice to audio
                 if($to_what === 'audio'){
-                    $this->sendAudio($chat,$media);
+                    $this->downloadAndReUpload($media,function ($local_file)use($chat,$media){
+                        $this->sendAudio(peer: $chat,file: $local_file, duration: $media->duration, title: 'title', performer: 'performer');
+                    });
                 }else $not_possible = true;
                 break;
             case Media\Audio::class://audio to voice
                 if($to_what === 'voice'){
-                    $this->sendVoice($chat,$media);
+                    $this->downloadAndReUpload($media,function ($local_file)use($chat,$media){
+                        $this->sendVoice($chat,file: $local_file);
+                    });
                 }else $not_possible = true;
                 break;
             case Media\Photo::class://photo to sticker
                 if($to_what === 'sticker'){
-                    $this->sendSticker($chat,$media,$mime);
+                    $this->downloadAndReUpload($media,function ($local_file)use($chat,$media){
+                        $this->sendSticker($chat,$local_file,$media->mimeType);
+                    });
                 }else $not_possible = true;
                 break;
             case Media\Gif::class://git to video
                 if($to_what === 'video'){
-                    $this->sendVideo($chat,$media);
+                    $this->downloadAndReUpload($media,function ($local_file)use($chat,$media){
+                        $this->sendVideo($chat,file: $local_file);
+                    });
                 }else $not_possible = true;
                 break;
             case Media\Sticker::class://sticker to video/photo
                 if($to_what === 'photo') {
-                    $this->sendPhoto($chat, $media);
+                    $this->downloadAndReUpload($media,function ($local_file)use($chat,$media){
+                        $this->sendPhoto($chat, $local_file);
+                    });
                 }elseif($to_what === 'video'){
-                    $this->sendVideo($chat,$media);
+                    $this->downloadAndReUpload($media,function ($local_file)use($chat,$media) {
+                        $this->sendVideo($chat, $local_file);
+                    });
                 }else $not_possible = true;
                 break;
         }
         if(isset($not_possible)){
             $fe = __('convert.not_possible',['from'=>$media::class,'to'=>$to_what]);
-        }else $fe = __('convert.success');
+        }else{
+            if(!isset($fe)) $fe = __('convert.success');
+        }
         return $this->answer($chat,$fs ?? null,$fe ?? null,$message_to_edit ?? $message,$reply2id ?? null);
     }
 
     public function changeMediaAttrs(Message $message):bool{
         $message_text = $message->message;
         $chat = $message->chatId;
-        if(!preg_match("/^change\s(filename|title|performer|mime|size)\sto\s(.+)$/sui",$message_text,$matches)) return false;
-        if(is_null(($reply = $message->getReply()))) return false;
-        if(is_null($media = $reply->media)) return $this->answer($chat,fe: __('replayed_no_media'),message_to_edit: $message_to_edit ?? $message);
+        if(!preg_match("/^\/change\s(filename|title|performer|mime|size)\sto\s(.+)$/sui",$message_text,$matches)) return false;
+        if(is_null(($reply = $message->getReply()))) return $this->answer($chat,fs: __('must_reply_with_media'));;
+        if(is_null(($media = $reply->media))) return $this->answer($chat,fs: __('replayed_no_media'));
         $message_to_edit = $message->replyOrEdit(__('change.changing'));
         $to_edit = $matches[1];
         $new_val = $matches[2];
@@ -563,7 +575,9 @@ Trait CommandTrait{
                 $title = $to_edit === 'title' ? $new_val : null;
                 $performer = $to_edit === 'performer' ? $new_val : null;
                 if($media instanceof Media\Audio){
-                    $this->sendAudio($chat,$media,title: $title,performer: $performer);
+                    $this->downloadAndReUpload($media,function (string $output_file_name) use($chat,$media,$title,$performer){
+                        $this->sendAudio(peer: $chat,file: new LocalFile($output_file_name),thumb: $media->thumb,title: $title,performer: $performer);
+                    });
                 }else $not_possible = true;
                 break;
             case 'size':
@@ -590,7 +604,8 @@ Trait CommandTrait{
                     imagedestroy($sourceImage);
                     imagedestroy($resizedImage);
                     $this->sendPhoto($chat,file: new LocalFile($new_file_name),caption: $message_text);
-
+                    \Amp\File\deleteFile($output_file_name);
+                    \Amp\File\deleteFile($new_file_name);
                 }elseif ($media instanceof Media\Audio or $media instanceof Media\Voice){
                     $fs = "not implemented";
                 }elseif ($media instanceof Media\Video){
@@ -600,20 +615,26 @@ Trait CommandTrait{
 
         if(isset($not_possible)){
             $fe = __('change.not_possible',['key'=>$to_edit,'type'=>basename($media::class)]);
-        }else $fe = __('success');
+        }else {
+            if(empty($fe)) $fe = __('change.success');
+        }
 
         return $this->answer($chat,$fs ?? null,$fe ?? null,$message_to_edit ?? $message,$reply2id ?? null);
     }
     private function answer(int|string $peer,string $fs = null,string $fe = null,Message $message_to_edit = null,int|string|Message $reply2id = null):bool{
         $reply2id = $reply2id instanceof Message ? $reply2id->id : $reply2id;
         $this->logger("new answer fs: ".(!empty($fs) ? "`$fs`" : 'null')."  fe: " . (!empty($fe) ? "`$fe`" : 'null'));
-        if (!empty($fs)) $this->sendMessage($peer, $fs, parseMode: Constants::DefaultParseMode, replyToMsgId: $reply2id,noWebpage: true);
+        if (!empty($fs)){
+            $this->sendMessage($peer, $fs, parseMode: Constants::DefaultParseMode, replyToMsgId: $reply2id,noWebpage: true);
+            return true;
+        }
         if (!empty($fe)){
             if($message_to_edit->out or $message_to_edit->senderId == $this->getSelf()['id']) {
                 $message_to_edit->editText($fe, parseMode: Constants::DefaultParseMode,noWebpage: true);
             }else $message_to_edit->reply($fe, parseMode: Constants::DefaultParseMode,noWebpage: true);
+            return true;
         }
-        return true;
+        return false;
     }
     private function globalOutMessage(Message $message) : bool{
         if(!$message->out) return false;

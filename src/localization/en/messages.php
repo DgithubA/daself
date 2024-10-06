@@ -17,12 +17,14 @@ return [
     'is_empty' => 'is empty',
     'canceled' => 'canceled.!',
     'replayed_no_media' => 'The replayed message has no media.',
+    'must_reply'=>'you must reply to some message.',
+    'must_reply_with_media'=>'you must reply to some message with a media.',
     'flag_not_exist' => 'flag <b>:flag</b> not exist!',
     'ttl_caption' => 'self-Destructing :type from :user_mention',
     'error_reporting_message' => "<b>#error as :function:</b>\n<b>in line:</b> :line\n<b>Message:</b>:message\n<b>on File:</b> :file",
     'status' => [
-        'on' => 'status: on',
-        'off' => 'status: off',
+        'on' => 'status: <b>on</b>🟢',
+        'off' => 'status: <b>off</b>🔴',
     ],
     'firstc' => [
         'comment_posted' => "<b>comment :x successfully posted in</b> :channel_mention \n <b>text:</b>\":text\" \n_-_-_-_-_-_-_-_-_-_\n",
@@ -51,7 +53,7 @@ return [
         'unset' => 'chat :mention unset as save. default save chat (savedMessage) was set.',
     ],
     'commands' => [
-        'add_successfully' => 'add successfully',
+        'add_successfully' => 'add successfully.',
         'bad_input_use_like' => 'incorrect command input. use like : <code>:like</code>',
         'not_exist' => 'not exist any element with key :key',
         'remove_successfully' => 'remove successfully.',
@@ -59,12 +61,12 @@ return [
         'help' => ':command (new|add|rm|remove|ls|list|off|on|help) [INDEX|TEXT]'
     ],
     'dlUp' => [
-        'downloading' => 'downloading...',
-        'uploading' => 'uploading...',
+        'downloading' => '📥downloading...',
+        'uploading' => '📤uploading...',
         'file_is_too_small' => 'file is too small. file size: <b>:size</b> | minimum <b>:minimumSize</b>',
         'download_script_url_wrong' => 'please set DOWNLOAD_SCRIPT_URL to use download link feature.',
         'url_not_found' => 'url not found. use /upload {URL} [FILENAME] or reply to messages contain url of file',
-        'upload_percent' => 'uploading <b>%:percent</b>',
+        'upload_percent' => '📤uploading <b>%:percent</b>',
         'upload_successfully' => "upload successfully.👇👇\nTotal upload time: <b>:time</b>\nTotal upload speed: <b>:speed</b> mbps",
         'download_link' => "<a href=':link'>download link:</a>\n <code>:link</code>",
     ],
