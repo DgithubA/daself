@@ -38,6 +38,8 @@ Trait CommandTrait{
             $is_command &= $this->downloaderUploader($message);
             $is_command &= $this->getLinkMessage($message);
             $is_command &= $this->saveStory($message);
+            $is_command &= $this->convertMedia($message);
+            $is_command &= $this->changeMediaAttrs($message);
             return $is_command;
         }catch (\Throwable $e) {
             $this->errorReport(__FUNCTION__, $e, $message);
@@ -197,7 +199,7 @@ Trait CommandTrait{
         $text = !empty($result) ? $result : "empty result.";
         if(!isset($quote)) $text .= !empty($error) ? __('bold',['bold'=>"\n---------------\nErrors :\n"]) . $error : "";
         try {
-            $text = __('results', ['data' => trim($text)]);
+            $text = __('runner.results', ['data' => trim($text)]);
             $message_to_edit->editText($text, parseMode: Constants::DefaultParseMode);
             if(isset($quote)) $this->messages->sendMessage(peer: $chat, reply_to: $quote, message:  __('bold',['bold'=>"Errors :\n"]).$error,parse_mode: Constants::DefaultParseMode);
         } catch (\Throwable $e) {
