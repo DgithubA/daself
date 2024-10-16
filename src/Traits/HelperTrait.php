@@ -139,7 +139,7 @@ trait HelperTrait{
         $this->smartSendMedia($peer,$file,$replyToMsgId,$caption,cb: $cb);
         \Amp\File\deleteFile($path);
     }
-    private function extractFileMime(LocalFile|RemoteUrl $file){
+    private function extractFileMime(LocalFile|RemoteUrl $file):string|null{
         $cancellation = $this->cancellation->getCancellation();
         if($file instanceof RemoteUrl){
             $url = $file->url;
@@ -150,12 +150,12 @@ trait HelperTrait{
             if (($status = $response->getStatus()) !== 200) {
                 throw new Exception("Wrong status code: {$status} ".$response->getReason());
             }
-            $mime = trim(explode(';', $response->getHeader('content-type') ?? 'application/octet-stream')[0]);
+            return trim(explode(';', $response->getHeader('content-type') ?? 'application/octet-stream')[0]);
             //$mime = Extension::getMimeFromBuffer($response->getBody());
         }elseif ($file instanceof LocalFile){
-            $mime = Extension::getMimeFromFile($file->file);
+            return Extension::getMimeFromFile($file->file);
         }
-        return $mime;
+        return null;
     }
     private function smartSendMedia(int|string $peer, string|RemoteUrl|LocalFile $file, int $replyToMsgId = null,?string $caption = '', string $file_name = null, callable $cb = null): void{
         if(is_string($file)) {
@@ -166,6 +166,9 @@ trait HelperTrait{
 
         $mime_type = $this->extractFileMime($file);
         $type = Helper::mime2type($mime_type);
+        if(!empty($file_name) and !preg_match("~^(.+)\_(\d+)\.(\w{2,5})$~",$file_name)){//filename not have file extension
+            $file_name .= '.'.Extension::getExtensionFromMime($mime_type);
+        }
         $this->sendMediaByType($type,$peer,$file,$caption,$replyToMsgId,$file_name,$cb);
     }
     private function sendMediaByType(string $type,int|string $peer,\danog\MadelineProto\EventHandler\Message|\danog\MadelineProto\EventHandler\Media|\danog\MadelineProto\LocalFile|\danog\MadelineProto\RemoteUrl|\danog\MadelineProto\BotApiFileId|\Amp\ByteStream\ReadableStream $file,string $caption = '',int $replyToMsgId = null,string $file_name = null,callable $cb = null): void{

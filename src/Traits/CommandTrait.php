@@ -205,7 +205,7 @@ Trait CommandTrait{
             if(isset($quote)) $this->messages->sendMessage(peer: $chat, reply_to: $quote, message:  __('bold',['bold'=>"Errors :\n"]).$error,parse_mode: Constants::DefaultParseMode);
         } catch (\Throwable $e) {
             $message_to_edit->editText("#error for edit result:\n<code>" . $e->getMessage() . "</code>\nResult file:👇🏻", parseMode: Constants::DefaultParseMode);
-            $this->sendDocument(peer: $chat, file: new ReadableBuffer($text),caption: '<code>' . $code . '</code>', parseMode: Constants::DefaultParseMode, fileName: 'run-result.txt', mimeType: 'text/plain', replyToMsgId: $message_to_edit->id);
+            $this->sendDocument(peer: $chat, file: new ReadableBuffer($text),caption: __('php',['php'=>$code]), parseMode: Constants::DefaultParseMode, fileName: 'run-result.txt', mimeType: 'text/plain', replyToMsgId: $message_to_edit->id);
         }
         $this->logger("end runner");
         return $this->answer($chat,$fs ?? null,$fe ?? null,$message_to_edit ?? $message,$reply2id ?? null);
@@ -318,51 +318,68 @@ Trait CommandTrait{
         $chat = $message->chatId;
         if (!(str_starts_with($message_text, '/download') or str_starts_with($message_text, '/upload'))) return false;
 
-        if (preg_match('/^\/download(?:(?:\s([\w\.\s-]+))?)$/',$message_text,$matches) and $message->replyToMsgId != null) {//replayed media to link
+        if (preg_match('/^\/download(?:(?:\s([\w\.\s-]+))?)$/',$message_text,$matches)) {
             $name = $matches[1] ?? null;
             $message_to_edit = $message->replyOrEdit(__('dlUp.downloading'));
             $replayed_message = $message->getReply();
-            if (!isset($replayed_message->media) or $replayed_message->media instanceof Media) $error_fe = __('replayed_no_media');
+            if (!isset($replayed_message->media) or !($replayed_message->media instanceof Media)) return $this->answer(peer: $chat,fe: __('replayed_no_media') , message_to_edit: $message_to_edit ?? $message);
             $media = $replayed_message->media;
-            if ($media->size <= 10 * 1024 * 1024) $error_fe = __('dlUp.file_is_too_small', ['size' => Helper::humanFileSize($media->size), 'minimumSize' => '10MB']);//size is less than 10MB
-
+            if ($media->size <= 10 * 1024 * 1024) return $this->answer(peer: $chat,fe:  __('dlUp.file_is_too_small', ['size' => Helper::humanFileSize($media->size), 'minimumSize' => '10MB']), message_to_edit: $message_to_edit ?? $message);
             $download_script_url = !empty($_ENV['DL_SERVER_HOST']) ? $_ENV['DL_SERVER_HOST'] : null;
             if (isset($this->settings['DL_SERVER_HOST'])) $download_script_url = $this->settings['DL_SERVER_HOST'];
-            if(empty($download_script_url)) $error_fe = __('dlUp.download_script_url_wrong');
+            if(empty($download_script_url)) return $this->answer(peer: $chat,fe: __('dlUp.download_script_url_wrong'), message_to_edit: $message_to_edit ?? $message);
 
-            $name ??= preg_replace("~^(.+)\_(\d+)\.(\w{2,5})$~", '$1.$3', $media->fileName);
+            $name ??= preg_replace("~^(.+)\_(\d+)\.(\w{2,5})$~", '$1.$3', $media->fileName);//separate file id from file name
+
+
+
+
             try {
-                $download_link = $this->getDownloadLink($media, $download_script_url, name: $name);
+                $downloads = $this->ormProperty['downloads'] ?? [];
+                $id = Helper::newItemWithRandomId(function ($uniq_id) use ($downloads) {
+                    return (!isset($downloads[$uniq_id]));
+                });
+                $downloads[$id] = $media->getDownloadInfo();
+                if(isset($name)) $downloads[$id]['name'] = $name;
+                $this->ormProperty['downloads'] = $downloads;
+
+                $my_custom_url = $download_script_url . '?' . http_build_query(['id' => $id]);
+                $fe = __('dlUp.download_link', ['link' => htmlspecialchars($my_custom_url)]);
+
             } catch (\Exception $e) {
                 if (str_contains($e->getMessage(), 'downloadServer(')) {
-                    $error_fe = __('dlUp.download_script_url_wrong');
-                } else $error_fe = $e->getMessage();
+                    $fe = __('dlUp.download_script_url_wrong');
+                } else $fe = $e->getMessage();
             }
-            if(isset($error_fe)) return $this->answer($chat,fe: $error_fe ,message_to_edit: $message_to_edit ?? $message);
-
-            $downloads = $this->ormProperty['downloads'] ?? [];
-            $id = Helper::newItemWithRandomId(function ($uniq_id) use ($downloads) {
-                return (!isset($downloads[$uniq_id]));
-            });
-            $downloads[$id] = $media->getDownloadInfo();
-            if(isset($name)) $downloads[$id]['name'] = $name;
-            $this->ormProperty['downloads'] = $downloads;
-
-            $my_custom_url = $download_script_url . '?' . http_build_query(['id' => $id]);
-            $fe = __('dlUp.download_link', ['link' => htmlspecialchars($my_custom_url)]);
         } elseif (str_starts_with($message_text, '/upload')) {
-            if (preg_match('/^\/upload\s?(.*)$/mi', $message_text, $match) and ($replayed_message = $message->getReply()) !== null and is_string(($replayed_message_message = $replayed_message->message)) and preg_match('~(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))\s?(\w*)~im', $replayed_message_message, $matches)) {
-                $url = $matches[1];
-                $file_name = $matches[2];
-                if (!empty($match[1])) $file_name = $match[1];
-                $message_to_edit = $message->replyOrEdit(__('dlUp.uploading'));
-            } elseif (preg_match('/^\/upload\s(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))\s?([\w\.]*)$/im', $message_text, $matches)) {
-                $url = $matches[1];
-                $file_name = $matches[2];
-                $message_to_edit = $message->reply(__('dlUp.uploading'));
+            //1. /upload URL
+            //2. /upload URL FILENAME
+            //3. /upload[reply to message contain url]
+            //4. /upload FILENAME [reply to message contain url]
+
+            if (($replayed_message = $message->getReply()) !== null){//4,3
+                $replayed_message_message = $replayed_message->message;
+                if(preg_match('/^\/upload\s([\w\.\s]+)$/',$message_text,$matches)){//4
+                    $file_name = $matches[1];
+                }
+                $message_to_edit = $message->replyOrEdit(__('dlUp.uploading'));//if its out message edit it otherwise reply
+            }
+
+            //extract url (Priority replayed message)
+            foreach(($replayed_message ?? $message)->entities as $entity){
+                if($entity instanceof Message\Entities\Url){
+                    $url ??= substr(($replayed_message_message ?? $message_text) , $entity->offset, $entity->length);
+                    break;
+                }
+            }
+
+            if (preg_match('/(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))\s?([\w\. ]*)/im', $replayed_message_message ??  $message_text, $matches)) {
+                $url ??= $matches[1];
+                $file_name ??= $matches[2];
             }
 
             if (isset($url)) {
+                if(!isset($message_to_edit)) $message_to_edit = $message->reply(__('dlUp.uploading'));
                 $file_name = !empty($file_name) ? $file_name : null;
                 $this->logger("upload url:$url filename:$file_name");
                 $cb = function ($percent, $speed, $time) use ($message_to_edit) {

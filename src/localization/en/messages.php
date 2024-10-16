@@ -3,6 +3,7 @@
 
 return [
     'json' => '<pre language="json"><code>:json</code></pre>',
+    'php' => '<pre language="php"><code>:php</code></pre>',
     'code' => '<code>:code</code>',
     'bold' => '<b>:bold</b>',
     'start_message' => "the bot uptime is:\n:counter",
