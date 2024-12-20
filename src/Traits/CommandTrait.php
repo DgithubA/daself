@@ -298,7 +298,7 @@ trait CommandTrait
                         $this->settings[$command]['indexes'][] = ['status' => true, 'text' => $match[3]];
                         $fs = __('commands.add_successfully');
                     } else {
-                        $fs = __('commands.bad_input_use_like', ['like' => $command . " " . $match[2] . " [TEXT]"]);
+                        $fs = __('commands.bad_input_use_like', ['like' => "$command $match[2] [TEXT]"]);
                     }
                     break;
                 case 'rm':
@@ -325,7 +325,7 @@ trait CommandTrait
                         if (!$found)
                             $fs = __('commands.not_exist', ['key' => $match[3]]);
                     } else {
-                        $fs = __('commands.bad_input_use_like', ['like' => $command . " " . $match[2] . " [TEXT|INDEX]"]);
+                        $fs = __('commands.bad_input_use_like', ['like' => "$command $match[2] [TEXT|INDEX]"]);
                     }
                     break;
                 case 'ls':
@@ -393,10 +393,10 @@ trait CommandTrait
         if (preg_match('/^\/download(?:(?:\s([\w\.\s-]+))?)$/', $message_text, $matches)) {
             $name = $matches[1] ?? null;
             $message_to_edit = $message->replyOrEdit(__('dlUp.downloading'));
-            $replayed_message = $message->getReply();
-            if (!isset($replayed_message->media) or !($replayed_message->media instanceof Media))
+            $replied = $message->getReply();
+            if (!isset($replied->media) or !($replied->media instanceof Media))
                 return $this->answer(peer: $chat, fe: __('replayed_no_media'), message_to_edit: $message_to_edit ?? $message);
-            $media = $replayed_message->media;
+            $media = $replied->media;
             if ($media->size <= 10 * 1024 * 1024)
                 return $this->answer(peer: $chat, fe: __('dlUp.file_is_too_small', ['size' => Helpers::humanFileSize($media->size), 'minimumSize' => '10MB']), message_to_edit: $message_to_edit ?? $message);
             $download_script_url = !empty($_ENV['DL_SERVER_HOST']) ? $_ENV['DL_SERVER_HOST'] : null;
@@ -430,8 +430,8 @@ trait CommandTrait
             //3. /upload[reply to message contain url]
             //4. /upload FILENAME [reply to message contain url]
 
-            if (($replayed_message = $message->getReply()) !== null) {//4,3
-                $replayed_message_message = $replayed_message->message;
+            if ($replied = $message->getReply()) {
+                $replayedText = $replied->message;
                 if (preg_match('/^\/upload\s([\w\.\s]+)$/', $message_text, $matches)) {//4
                     $file_name = $matches[1];
                 }
@@ -439,14 +439,15 @@ trait CommandTrait
             }
 
             //extract url (Priority replayed message)
-            foreach (($replayed_message ?? $message)->entities as $entity) {
+            foreach (($replied ?? $message)->entities as $entity) {
                 if ($entity instanceof Message\Entities\Url) {
-                    $url ??= substr(($replayed_message_message ?? $message_text), $entity->offset, $entity->length);
+                    // TODO: define `$url` first!!!
+                    $url ??= substr($replayedText ?? $message_text, $entity->offset, $entity->length);
                     break;
                 }
             }
 
-            if (preg_match('/(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))\s?([\w\. ]*)/im', $replayed_message_message ?? $message_text, $matches)) {
+            if (preg_match('/(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+\~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.\~#?&\/=]*))\s?([\w\. ]*)/im', $replayedText ?? $message_text, $matches)) {
                 $url ??= $matches[1];
                 $file_name ??= $matches[2];
             }
