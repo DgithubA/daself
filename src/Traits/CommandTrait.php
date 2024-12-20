@@ -198,19 +198,33 @@ trait CommandTrait
             );
         }
 
-        $this->logger("start runner: " . $code);
-        $torun = "return (function () use
-                        (&\$message ,&\$chat ,&\$message_to_edit,&\$reply_to_message_id){
-                        {$code}
-                        \Revolt\EventLoop::queue(\$this->answer(...),\$chat,\$fs ?? null,\$fe ?? null,\$message_to_edit ?? \$message,\$reply2id ?? null);
-                        if(isset(\$json)) echo \App\Helpers::myJson(\$json);
-                        }
-                   )();";
+        $this->logger("started code runner: $code");
+        $toRun = \sprintf(
+            <<<'EOF'
+                return (function () use (&$message, &$chat, &$message_to_edit, &$reply_to_message_id) {
+                    %s
+                    %s::queue(
+                        $this->answer(...),
+                        $chat,
+                        $fs ?? null,
+                        $fe ?? null,
+                        $message_to_edit ?? $message,
+                        $reply2id ?? null,
+                    );
+                    if (isset($json)) {
+                        echo %s::myJson($json);
+                    }
+                })();
+                EOF,
+            $code,
+            \Revolt\EventLoop::class,
+            Helpers::class,
+        );
         $result = "";
         $error = "";
         ob_start();
         try {
-            eval ($torun);
+            eval ($toRun);
             $result .= ob_get_contents() . "\n";
         } catch (\Throwable $e) {
             $line = $e->getLine();
