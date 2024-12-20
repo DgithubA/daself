@@ -54,4 +54,5 @@ str_starts_with($session_dir, '/') && $session_dir = substr($session_dir, 1);
 str_starts_with($session_dir, './') || $session_dir = "./$session_dir";
 
 is_dir($session_dir) || mkdir($session_dir, recursive: true);
-$session_file = realpath("$session_dir/daself.madeline");
+$session_dir = realpath($session_dir);
+$session_file = "$session_dir/daself.madeline";
