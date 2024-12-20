@@ -1,7 +1,8 @@
 <?php
 
-use APP\localization\localization;
+use App\Localization\Lang;
 
-function __($key, $replace = []) :string{
-    return localization::getInstance()->get($key, $replace);
+function __($key, $replace = []): string
+{
+    return Lang::getInstance()->get($key, $replace);
 }

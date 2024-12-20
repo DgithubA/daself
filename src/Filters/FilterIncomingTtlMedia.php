@@ -1,7 +1,6 @@
 <?php
 
-
-namespace APP\Filters;
+namespace App\Filters;
 
 use Attribute;
 use danog\MadelineProto\EventHandler;
@@ -23,14 +22,17 @@ use danog\MadelineProto\VoIP\CallState;
  * Use with #[FilterIncomingTtlMedia]
  */
 #[Attribute(Attribute::TARGET_METHOD)]
-final class FilterIncomingTtlMedia extends Filter{
+final class FilterIncomingTtlMedia extends Filter
+{
 
-    public function initialize(EventHandler $API): Filter{
+    public function initialize(EventHandler $API): Filter
+    {
         return $this;
         //return (new FiltersAnd(new FilterMedia(), new FilterIncoming(),new FilterPrivate()))->initialize($API);
     }
 
-    public function apply(Update $update): bool{
+    public function apply(Update $update): bool
+    {
         $FilterPrivate = $update instanceof PrivateMessage;
 
         $FilterMedia = $update instanceof Message && $update->media !== null;

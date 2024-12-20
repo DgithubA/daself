@@ -1,6 +1,6 @@
 <?php
 
-namespace APP\Filters;
+namespace App\Filters;
 
 use Attribute;
 use danog\MadelineProto\EventHandler;

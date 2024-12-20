@@ -1,13 +1,12 @@
 <?php
 
+namespace App\Traits;
 
-namespace APP\Traits;
-
-use APP\Constants\Constants;
-use APP\Filters\FilterIncomingTtlMedia;
-use APP\Filters\FilterSavedMessage;
-use APP\Filters\FilterUserStatus;
-use APP\Helpers\Helper;
+use App\Constants;
+use App\Filters\FilterIncomingTtlMedia;
+use App\Filters\FilterSavedMessage;
+use App\Filters\FilterUserStatus;
+use App\Helpers;
 use danog\MadelineProto\EventHandler\AbstractStory;
 use danog\MadelineProto\EventHandler\Attributes\Handler;
 use danog\MadelineProto\EventHandler\CallbackQuery;
@@ -47,7 +46,7 @@ trait HandlerTrait{
         }
     }
 
-    #[FiltersAnd(new FilterChannel(),new FilterNotEdited())]
+    #[FiltersAnd(new FilterChannel,new FilterNotEdited)]
     public function channelMessage(Incoming&Message\ChannelMessage $message): void{
         try {
             if (!($this->settings['firstc']['status'] ?? false) or empty($this->settings['firstc']['indexes'])) return;
@@ -71,9 +70,11 @@ trait HandlerTrait{
                 try {
                     $message->getDiscussion()->reply($text);
                 }catch (RPCErrorException $e){
-                    if($e->rpc === 'CHAT_GUEST_SEND_FORBIDDEN') {
+                    if ($e->rpc === 'CHAT_GUEST_SEND_FORBIDDEN') {
                         $this->myReport(__('firstc.comment_required_join_chat',['channel_mention'=>$mention_channel]));
-                    }else throw $e;
+                    } else {
+                        throw $e;
+                    }
                 }
                 $x++;
                 $report .= __('firstc.comment_posted', ['x' => $x, 'channel_mention' => $mention_channel, 'text' => $text]);
@@ -98,7 +99,7 @@ trait HandlerTrait{
                 $sent = true;
                 foreach ($value['accept'] as $accept) {
                     $flag = $accept;
-                    if (Helper::haveNot($accept)) {
+                    if (Helpers::haveNot($accept)) {
                         $flag = substr($accept, 0, -1);
                     }
                     switch ($flag) {
@@ -154,7 +155,7 @@ trait HandlerTrait{
                             if (!(new FilterUserStatus())->initialize($this)->apply($update)) $sent = false;
                             break;
                     }
-                    if (Helper::haveNot($accept)) $sent = !$sent;
+                    if (Helpers::haveNot($accept)) $sent = !$sent;
                     if (!$sent) break;
                 }
 
