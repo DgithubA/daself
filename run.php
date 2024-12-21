@@ -1,5 +1,5 @@
 <?php
 
-require 'config.php';
+require __DIR__ . '/config.php';
 
-APP\botHandler::startAndLoop($session_file, $settings);
+App\BotHandler::startAndLoop($session_file, $settings);
